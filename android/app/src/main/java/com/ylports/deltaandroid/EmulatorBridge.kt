@@ -11,5 +11,8 @@ object EmulatorBridge {
     external fun sampleRate(): Int
     /** Persist battery-backed SRAM before Android suspends the process. */
     external fun flushSave()
+    /** Save/load emulation state via the core's real libretro serialization API. */
+    external fun saveState(slot: Int): String?
+    external fun loadState(slot: Int): String?
     external fun close()
 }
