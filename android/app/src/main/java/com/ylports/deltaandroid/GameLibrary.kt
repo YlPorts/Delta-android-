@@ -14,7 +14,10 @@ import java.util.Locale
  * Device-private Delta-style game library. Game paths are stable across file
  * picker sessions and are identified by ROM content instead of a transient URI.
  */
-data class LibraryGame(val id: String, val title: String, val system: String, val file: File)
+data class LibraryGame(
+    val id: String, val title: String, val system: String, val file: File,
+    val favorite: Boolean = false, val lastPlayed: Long = 0L
+)
 
 class GameLibrary(private val context: Context) {
     private val directory = File(context.filesDir, "games").apply { mkdirs() }
@@ -31,10 +34,34 @@ class GameLibrary(private val context: Context) {
                 extension !in listOf("gb", "gbc")) continue
             val file = File(directory, "$id.$extension")
             if (file.isFile) result.add(
-                LibraryGame(id, item.optString("title", "Juego"), extension, file)
+                LibraryGame(id, item.optString("title", "Juego"), extension, file,
+                    item.optBoolean("favorite", false), item.optLong("lastPlayed", 0L))
             )
         }
         return result.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+    }
+
+    fun markPlayed(id: String) {
+        save(games().map { if (it.id == id) it.copy(lastPlayed = System.currentTimeMillis()) else it })
+    }
+
+    fun toggleFavorite(id: String) {
+        save(games().map { if (it.id == id) it.copy(favorite = !it.favorite) else it })
+    }
+
+    private fun save(games: List<LibraryGame>) {
+        val json = JSONArray()
+        for (game in games) json.put(JSONObject().apply {
+            put("id", game.id)
+            put("title", game.title)
+            put("system", game.system)
+            put("favorite", game.favorite)
+            put("lastPlayed", game.lastPlayed)
+        })
+        val tmp = File(directory, "library.tmp")
+        tmp.writeText(json.toString(), Charsets.UTF_8)
+        // Atomic replacement on the same filesystem, with no silent catalog loss.
+        require(tmp.renameTo(catalog)) { "No se pudo actualizar la biblioteca." }
     }
 
     fun importGame(uri: Uri): LibraryGame {
@@ -70,19 +97,10 @@ class GameLibrary(private val context: Context) {
             if (!dest.exists()) require(temp.renameTo(dest)) { "No se pudo guardar la ROM." }
             else temp.delete()
             val title = name.substringBeforeLast('.').replace('_', ' ')
-            val result = LibraryGame(hash, title, extension, dest)
-            val entries = games().filterNot { it.id == hash } + result
-            val json = JSONArray()
-            for (game in entries) {
-                json.put(JSONObject().apply {
-                    put("id", game.id); put("system", game.system); put("title", game.title)
-                })
-            }
-            val work = File(directory, "library.tmp")
-            work.writeText(json.toString(), Charsets.UTF_8)
-            require(work.renameTo(catalog) || run {
-                catalog.delete(); work.renameTo(catalog)
-            }) { "No se pudo guardar la biblioteca." }
+            val existing = games().find { it.id == hash }
+            val result = LibraryGame(hash, existing?.title ?: title, extension, dest,
+                existing?.favorite ?: false, existing?.lastPlayed ?: 0L)
+            save(games().filterNot { it.id == hash } + result)
             return result
         } finally { temp.delete() }
     }
