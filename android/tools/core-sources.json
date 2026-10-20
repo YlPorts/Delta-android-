@@ -1,0 +1,12 @@
+{
+  "gambatte": {
+    "url": "https://github.com/libretro/gambatte-libretro.git",
+    "revision": "d9d6cd06382d1ced30de34d56d3609452323dab1",
+    "role": "Existing Android libretro Gambatte adapter; same engine family as GBCDeltaCore, not the identical iOS engine revision"
+  },
+  "nestopia": {
+    "path": "Cores/NESDeltaCore/nestopia",
+    "parent_revision": "c88ef1e7c68ad723194d1b691362ac7d7394f968",
+    "role": "Exact Nestopia source and libretro adapter vendored by the original NESDeltaCore submodule"
+  }
+}

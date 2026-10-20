@@ -1,11 +1,13 @@
-// Generated automatically by android/tools/import_ios_colors.py during CI.
-// These compile-time defaults are replaced with original iOS named colors on build.
+// GENERATED from the original iOS catalogs; do not edit.
 package com.ylports.deltaandroid
 
 import android.graphics.Color
 
 object OriginalDeltaColors {
-    val darkGray: Int = Color.rgb(16, 17, 21)
-    val lightPurple: Int = Color.rgb(186, 176, 241)
-    val purple: Int = Color.rgb(121, 83, 231)
+    // Resources/Assets.xcassets/Colors/Purple.colorset/Contents.json
+    val purple: Int = Color.rgb(139, 40, 247)
+    // Resources/Assets.xcassets/Colors/LightPurple.colorset/Contents.json
+    val lightPurple: Int = Color.rgb(214, 188, 255)
+    // Resources/Assets.xcassets/Colors/DarkGray.colorset/Contents.json
+    val darkGray: Int = Color.rgb(38, 38, 38)
 }

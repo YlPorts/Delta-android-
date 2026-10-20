@@ -33,3 +33,14 @@ xcuserdata
 
 ## Project-Specific
 Delta.playground
+
+# Android generated build state and source-built cores
+android/.gradle/
+android/local.properties
+android/app/.cxx/
+android/app/src/main/jniLibs/
+android/.external/
+
+# Python tool bytecode
+__pycache__/
+*.pyc

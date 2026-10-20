@@ -3,57 +3,146 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
-    paths:
-      - 'android/**'
-      - '.github/workflows/android-arm64.yml'
+    paths: ['android/**', '.github/workflows/android-arm64.yml', 'Resources/Assets.xcassets/**']
   push:
     branches: [android/native-bootstrap]
-    paths:
-      - 'android/**'
-      - '.github/workflows/android-arm64.yml'
-
+    paths: ['android/**', '.github/workflows/android-arm64.yml', 'Resources/Assets.xcassets/**']
 permissions:
   contents: read
-
+concurrency:
+  group: delta-android-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
-  build:
+  host-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: false
-          lfs: false
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-      - name: Install SDK and NDK
+        with: {submodules: false, lfs: false}
+      - name: Prepare pinned sources and original resources
         run: |
-          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
-      - name: Build original Gambatte emulation engine for ARM64
+          python3 android/tools/build_cores.py --prepare
+          python3 android/tools/import_ios_colors.py
+          python3 android/tools/import_ios_assets.py
+          python3 -m unittest discover -s android/tools/tests -p 'test_*.py'
+      - name: Execute real engines through the production host with ASan and UBSan
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth=1 https://github.com/libretro/gambatte-libretro.git /tmp/gambatte
-          NDK="${ANDROID_HOME}/ndk/27.2.12479018"
-          "${NDK}/ndk-build" -C /tmp/gambatte/libgambatte/libretro/jni APP_ABI=arm64-v8a APP_PLATFORM=android-24 -j2
-          CORE_SO="$(find /tmp/gambatte -type f -name '*.so' | head -1)"
-          test -n "$CORE_SO" && test -f "$CORE_SO"
-          mkdir -p android/app/src/main/jniLibs/arm64-v8a
-          cp "$CORE_SO" android/app/src/main/jniLibs/arm64-v8a/libgambatte_libretro.so
-          file android/app/src/main/jniLibs/arm64-v8a/libgambatte_libretro.so
-      - name: Import original Delta iOS palette
-        run: python3 android/tools/import_ios_colors.py
-      - name: Compile Android development APK
-        run: gradle --project-dir android :app:assembleDebug --no-daemon
-      - name: Upload installable APK (development)
-        uses: actions/upload-artifact@v4
+          mkdir -p android/build/ci-logs
+          python3 android/tools/build_cores.py --host-tests --jobs 2 2>&1 | tee android/build/ci-logs/host-tests.log
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: DeltaAndroid-0.2.0-dev-arm64
+          name: DeltaAndroid-host-test-logs
+          path: android/build/ci-logs/
+          if-no-files-found: ignore
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: {submodules: false, lfs: false}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: Install pinned SDK and NDK
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Build Gambatte and original Nestopia for ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p android/build/ci-logs
+          python3 android/tools/build_cores.py --prepare --abi arm64-v8a --jobs 2 2>&1 | tee android/build/ci-logs/cores-arm64.log
+      - name: Package authentic iOS colors, icons, skins and licenses
+        run: |
+          python3 android/tools/import_ios_colors.py
+          python3 android/tools/import_ios_assets.py
+          python3 -m unittest discover -s android/tools/tests -p 'test_*.py'
+      - name: Compile Kotlin, JNI and development APK; run lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --project-dir android :app:assembleDebug :app:lintDebug --no-daemon --max-workers=2 2>&1 | tee android/build/ci-logs/gradle-arm64.log
+      - name: Verify packaged engines, ABI, licenses and 16KB ELF alignment
+        run: |
+          python3 android/tools/verify_apk.py android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 android/app/build/outputs/apk/debug/app-debug.apk > android/build/ci-logs/apk-alignment.log
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Bundle corresponding source and exact revisions
+        run: python3 android/tools/source_bundle.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeltaAndroid-0.3.0-dev-arm64
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeltaAndroid-0.3.0-dev-source
+          path: android/build/corresponding-source/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: DeltaAndroid-arm64-reports
+          path: |
+            android/build/ci-logs/
+            android/app/build/reports/
+            android/app/.cxx/**/CMakeFiles/CMakeError.log
+          if-no-files-found: ignore
+  android-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with: {submodules: false, lfs: false}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: Install SDK and NDK
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Prepare actual cores and test-only diagnostic programs
+        run: |
+          python3 android/tools/build_cores.py --prepare --abi x86_64 --jobs 2
+          python3 android/tools/import_ios_colors.py
+          python3 android/tools/import_ios_assets.py
+          python3 android/tools/tests/diagnostic_roms.py android/app/build/generated/androidTestAssets
+          gradle --project-dir android -PdeltaAbi=x86_64 :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon --max-workers=2
+      - name: Enable KVM for the disposable Android test device
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Exercise native JNI and user flows; capture actual Android screens
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb shell settings put system accelerometer_rotation 0
+            adb shell settings put secure ui_night_mode 2
+            bash android/tools/run_emulator_tests.sh
+      - name: Preserve screenshots and device diagnostics, including failures
+        if: always()
+        run: |
+          mkdir -p android/build/runtime
+          adb pull /sdcard/Android/data/com.ylports.deltaandroid/files/screenshots android/build/runtime/ || true
+          adb logcat -d > android/build/runtime/logcat.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: DeltaAndroid-runtime-screenshots-and-reports
+          path: |
+            android/build/runtime/
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+          if-no-files-found: ignore

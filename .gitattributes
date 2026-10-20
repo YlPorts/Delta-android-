@@ -1,0 +1,4 @@
+# Preserve authentic resource bytes; PDF cross-reference tables contain spaces.
+android/app/src/main/assets/ios/*.pdf binary
+android/app/src/main/assets/skins/*.deltaskin binary
+android/keystore/*.jks binary

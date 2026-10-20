@@ -1,0 +1,134 @@
+{
+  "res/drawable-mdpi/delta_box_art.png": {
+    "source": "Resources/Assets.xcassets/BoxArt.imageset/BoxArt.png",
+    "sha256": "f16988b7002155e0cb4e264aa0f18d794f357de2bcaf890482bed1b0d6a250f3"
+  },
+  "res/drawable-xhdpi/delta_box_art.png": {
+    "source": "Resources/Assets.xcassets/BoxArt.imageset/BoxArt@2x.png",
+    "sha256": "89cf770ba7b060f55a39a3839ccf0eacd876b683058fb787ae369896df03d145"
+  },
+  "res/drawable-xxhdpi/delta_box_art.png": {
+    "source": "Resources/Assets.xcassets/BoxArt.imageset/BoxArt@3x.png",
+    "sha256": "8d6e640179649ee28b3d898527de8fbf79f4a8af1eca2c7682f5f5adcc2325bc"
+  },
+  "res/drawable-mdpi/delta_delta_placeholder.png": {
+    "source": "Resources/Assets.xcassets/DeltaPlaceholder.imageset/DeltaPlaceholder.png",
+    "sha256": "d40ec4417f6a5f30163026859b5fe85139bcda57f01fead67da03b1d4f4626bb"
+  },
+  "res/drawable-xhdpi/delta_delta_placeholder.png": {
+    "source": "Resources/Assets.xcassets/DeltaPlaceholder.imageset/DeltaPlaceholder@2x.png",
+    "sha256": "86551f85fe3c7e0c6ff2ce344b3aa30fcae6ff9e5cc96b4dad7679b6fe421c6b"
+  },
+  "res/drawable-xxhdpi/delta_delta_placeholder.png": {
+    "source": "Resources/Assets.xcassets/DeltaPlaceholder.imageset/DeltaPlaceholder@3x.png",
+    "sha256": "433bdc0a4764e4a212605e43cca9ea3c730f39c55b5a3281d21c4673467046ce"
+  },
+  "res/drawable-mdpi/delta_save_state.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/SaveSaveState.imageset/SaveSaveState.png",
+    "sha256": "2832d679a4ec0bbff19b9224c6d4b16e48df0793a84efc077b2bb2d1bac90c55"
+  },
+  "res/drawable-xhdpi/delta_save_state.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/SaveSaveState.imageset/SaveSaveState@2x.png",
+    "sha256": "a92f4eb775986196d87b1a1d40dfc82e89200a46e8fda9ef8317056cc430fcb9"
+  },
+  "res/drawable-xxhdpi/delta_save_state.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/SaveSaveState.imageset/SaveSaveState@3x.png",
+    "sha256": "496296905398b5032fd8b446937d98d420fb3582b81f346c3474b9414bb14554"
+  },
+  "res/drawable-mdpi/delta_load_state.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/LoadSaveState.imageset/LoadSaveState.png",
+    "sha256": "d12f7526f164d95fb72c193d45c55330a3d5666b9d43d7a79748c062a8ab97fa"
+  },
+  "res/drawable-xhdpi/delta_load_state.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/LoadSaveState.imageset/LoadSaveState@2x.png",
+    "sha256": "78439be6642f14889b9d3155973a8256e21b21afd58594105b828f29708d7547"
+  },
+  "res/drawable-xxhdpi/delta_load_state.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/LoadSaveState.imageset/LoadSaveState@3x.png",
+    "sha256": "1233439202c22179c30a3cdce420e055f8d402c7010c20bfb44e5a24199bdf33"
+  },
+  "res/drawable-mdpi/delta_cheat_codes.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/CheatCodes.imageset/cheats@1x.png",
+    "sha256": "0c3735830bc83b6a824650392bf8488e72a776348538a2c8ff6e9d5fed3949dd"
+  },
+  "res/drawable-xhdpi/delta_cheat_codes.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/CheatCodes.imageset/cheats@2x.png",
+    "sha256": "35d447c001ef824e5e1bc9c9146b37f861382075e4584bff8eafb53211005935"
+  },
+  "res/drawable-xxhdpi/delta_cheat_codes.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/CheatCodes.imageset/cheats@3x.png",
+    "sha256": "4d148bb6c62094c69ac7bd66fe2900e11b96afed0dd348c137b8cef44bfb4888"
+  },
+  "res/drawable-mdpi/delta_fast_forward.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/FastForward.imageset/FastForward.png",
+    "sha256": "ecd603b9ac803e8c21ea88bb4f859b6b26d9891d87232860bd5fcb02b97d665b"
+  },
+  "res/drawable-xhdpi/delta_fast_forward.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/FastForward.imageset/FastForward@2x.png",
+    "sha256": "a547040598b57ae6a5d54b92f5f98cd84b84d41bd38e024d2c92d2e9c1a1dac0"
+  },
+  "res/drawable-xxhdpi/delta_fast_forward.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/FastForward.imageset/FastForward@3x.png",
+    "sha256": "5efd488cdae139b30458523732098120a3a6e5f8a1cd9ec3a3b79bc141fffb4a"
+  },
+  "res/drawable-mdpi/delta_sustain_buttons.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/SustainButtons.imageset/sustain@1x.png",
+    "sha256": "e3aa178f6b4554ddc81e2c12467ce544dfbfef76c2c14eb7412dc316c5ccea9e"
+  },
+  "res/drawable-xhdpi/delta_sustain_buttons.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/SustainButtons.imageset/sustain@2x.png",
+    "sha256": "a0b52d9e9bbb5c0021ff7089e37a9daefc29bbe1916c16956f8ecfc5045e2686"
+  },
+  "res/drawable-xxhdpi/delta_sustain_buttons.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/SustainButtons.imageset/sustain@3x.png",
+    "sha256": "937ad70812b956a30018ada3234bff94deae898021034a461b2d3a76f3cda1df"
+  },
+  "res/drawable-mdpi/delta_screenshot.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/Screenshot.imageset/screenshot.png",
+    "sha256": "cd04dff070b3a9353f1a41d36ef4dc6f5a934263955f98b0c294bb06c4af00e4"
+  },
+  "res/drawable-xhdpi/delta_screenshot.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/Screenshot.imageset/screenshot@2x.png",
+    "sha256": "f8138d683547aab499bff6132a8cbe4a0615da3b37a0366be052f6241ea62ec4"
+  },
+  "res/drawable-xxhdpi/delta_screenshot.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/Screenshot.imageset/screenshot@3x.png",
+    "sha256": "a8a57ce411fda13741b6cc25ed00420662aba1fdfad2b7b2a6a0cfe49d42eb46"
+  },
+  "assets/ios/settings.pdf": {
+    "source": "Resources/Assets.xcassets/SettingsButton.imageset/gear_1.pdf",
+    "sha256": "85d6a563793b61c83104809197836680b696b5b177c3744aef15ad893244cd25"
+  },
+  "assets/skins/gbc.deltaskin": {
+    "source": "Cores/GBCDeltaCore/GBCDeltaCore/Controller Skin/Standard.deltaskin",
+    "sha256": "a56c9cdf6c4bf23b31efd6df58810b7fc62cf3f795a93108eb2a587e025c6654"
+  },
+  "assets/skins/nes.deltaskin": {
+    "source": "Cores/NESDeltaCore/NESDeltaCore/Controller Skin/Standard.deltaskin",
+    "sha256": "76f48eea561ee282055e13000016b2e952730dc5edeb357795d8265777fdafb2"
+  },
+  "assets/skins/gba.deltaskin": {
+    "source": "Cores/GBADeltaCore/GBADeltaCore/Controller Skin/Standard.deltaskin",
+    "sha256": "18ed8380da59d7516c5d36507cbe0697837c03c83d39d82f7a468fb936670213"
+  },
+  "assets/skins/snes.deltaskin": {
+    "source": "Cores/SNESDeltaCore/SNESDeltaCore/Controller Skin/Standard.deltaskin",
+    "sha256": "698556abf3c338953f8573ec2415a38f44ba1857ba1ddcee794481de25f8b9e6"
+  },
+  "assets/skins/n64.deltaskin": {
+    "source": "Cores/N64DeltaCore/N64DeltaCore/Controller Skin/Standard.deltaskin",
+    "sha256": "db1c5679a59516c25696906c2ef9858b2e7613cdda26a863a8a9aed8b1382e16"
+  },
+  "assets/skins/ds.deltaskin": {
+    "source": "Cores/MelonDSDeltaCore/MelonDSDeltaCore/Controller Skin/Standard.deltaskin",
+    "sha256": "72af14bd9693138d4637ca0a1ef9c9ce5f830c17657c5a0be8019e6ae82ca5ad"
+  },
+  "assets/skins/genesis.deltaskin": {
+    "source": "Cores/GPGXDeltaCore/Sources/GPGXDeltaCore/Resources/Controller Skin/Standard.deltaskin",
+    "sha256": "fdc98e026cdaf1475101e9038cbe75b1e6bf18ae2e9c806d11abafa3b744071f"
+  },
+  "assets/licenses/Delta-AGPL-3.0.txt": {
+    "source": "COPYING",
+    "sha256": "4df3c306dddaaf4baffdff5ca820cc679ac8cd6dc263c6a74517783e42fa7a3b"
+  }
+}
