@@ -15,6 +15,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -47,6 +48,8 @@ class MainActivity : Activity() {
     private var currentPage = "all"
     private var filterText = ""
     private var selectedGame: LibraryGame? = null
+    private var swipeStartX = 0f
+    private var swipeStartY = 0f
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
 
@@ -579,6 +582,40 @@ class MainActivity : Activity() {
             }
             if (activeGame != null) emulator?.start()
         }
+    }
+
+    // Gesture navigation from Delta's UIPageViewController: horizontal swipes
+    // move between Favorites / Recently Played / console collections.
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (activeGame == null && !inSettings && filterText.isBlank()) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    swipeStartX = event.x
+                    swipeStartY = event.y
+                }
+                MotionEvent.ACTION_UP -> {
+                    val dx = event.x - swipeStartX
+                    val dy = event.y - swipeStartY
+                    if (kotlin.math.abs(dx) > dp(72) &&
+                        kotlin.math.abs(dy) < dp(60)) {
+                        val all = library.games()
+                        val ids = mutableListOf<String>()
+                        if (all.any { it.favorite }) ids.add("favorites")
+                        if (all.any { it.lastPlayed > 0 }) ids.add("recent")
+                        ids.add("all")
+                        val current = ids.indexOf(currentPage).coerceAtLeast(0)
+                        val next = (current + if (dx < 0) 1 else -1)
+                            .coerceIn(0, ids.lastIndex)
+                        if (next != current) {
+                            currentPage = ids[next]
+                            showLibrary()
+                            return true
+                        }
+                    }
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
