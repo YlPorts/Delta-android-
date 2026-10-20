@@ -280,12 +280,39 @@ class MainActivity : Activity() {
         emulator?.stop()
         AlertDialog.Builder(this)
             .setTitle(game.title)
-            .setItems(arrayOf("Reanudar", "Cambiar skin", "Biblioteca")) { _, which ->
+            .setItems(arrayOf(
+                "Reanudar", "Guardar estado", "Cargar estado", "Cambiar skin", "Biblioteca"
+            )) { _, which ->
                 when (which) {
                     0 -> emulator?.start()
-                    1 -> picker(SELECT_SKIN)
-                    2 -> showLibrary()
+                    1 -> selectStateSlot(true)
+                    2 -> selectStateSlot(false)
+                    3 -> picker(SELECT_SKIN)
+                    4 -> showLibrary()
                 }
+            }
+            .setOnCancelListener { if (activeGame != null) emulator?.start() }
+            .show()
+    }
+
+    private fun selectStateSlot(saving: Boolean) {
+        if (activeGame == null) return
+        val slots = (1..5).map { "Ranura $it" }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(if (saving) "Guardar estado" else "Cargar estado")
+            .setItems(slots) { _, selection ->
+                // The emulation thread was stopped before opening the pause menu.
+                val error = if (saving) EmulatorBridge.saveState(selection)
+                            else EmulatorBridge.loadState(selection)
+                if (error == null) {
+                    android.widget.Toast.makeText(this,
+                        if (saving) "Estado guardado" else "Estado cargado",
+                        android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    android.widget.Toast.makeText(this, error,
+                        android.widget.Toast.LENGTH_LONG).show()
+                }
+                if (activeGame != null) emulator?.start()
             }
             .setOnCancelListener { if (activeGame != null) emulator?.start() }
             .show()
