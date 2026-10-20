@@ -213,7 +213,7 @@ class MainActivity : Activity() {
                 if (filterText.isBlank()) empty.addView(
                     action("Import Game…") { picker(SELECT_ROM) }
                 )
-                scroll.addView(empty, ScrollView.LayoutParams(
+                scroll.addView(empty, FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT))
                 return
