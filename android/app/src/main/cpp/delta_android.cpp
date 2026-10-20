@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <cstdio>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -38,6 +39,9 @@ void (*retro_get_system_av_info)(AVInfo *) = nullptr;
 bool (*retro_load_game)(const GameInfo *) = nullptr;
 void (*retro_unload_game)() = nullptr;
 void (*retro_run)() = nullptr;
+size_t (*retro_serialize_size)() = nullptr;
+bool (*retro_serialize)(void *, size_t) = nullptr;
+bool (*retro_unserialize)(const void *, size_t) = nullptr;
 void *(*retro_get_memory_data)(unsigned) = nullptr;
 size_t (*retro_get_memory_size)(unsigned) = nullptr;
 
@@ -172,6 +176,9 @@ std::string openCore(const std::string &lib, const std::string &rom, const std::
         symbol("retro_load_game", retro_load_game) &&
         symbol("retro_unload_game", retro_unload_game) &&
         symbol("retro_run", retro_run) &&
+        symbol("retro_serialize_size", retro_serialize_size) &&
+        symbol("retro_serialize", retro_serialize) &&
+        symbol("retro_unserialize", retro_unserialize) &&
         symbol("retro_get_memory_data", retro_get_memory_data) &&
         symbol("retro_get_memory_size", retro_get_memory_size);
     if (!ok) { closeCore(); return "El motor no implementa la API libretro necesaria."; }
@@ -205,6 +212,47 @@ std::string openCore(const std::string &lib, const std::string &rom, const std::
     } else sampleRate = 48000;
     return "";
 }
+std::string statePath(int slot) {
+    return romPath + ".state" + std::to_string(slot);
+}
+std::string saveState(int slot) {
+    if (!gameLoaded || slot < 0 || slot > 9) return "No hay juego o ranura válida.";
+    const size_t size = retro_serialize_size();
+    if (!size || size > 4u * 1024u * 1024u) return "El núcleo no permite guardar estados.";
+    std::vector<uint8_t> snapshot(size);
+    if (!retro_serialize(snapshot.data(), snapshot.size()))
+        return "No se pudo serializar el estado.";
+    const auto path = statePath(slot);
+    const auto temp = path + ".tmp";
+    std::ofstream file(temp, std::ios::binary | std::ios::trunc);
+    if (!file || !file.write(reinterpret_cast<const char *>(snapshot.data()),
+                              static_cast<std::streamsize>(snapshot.size()))) {
+        std::remove(temp.c_str());
+        return "No se pudo escribir el estado.";
+    }
+    file.close();
+    if (std::rename(temp.c_str(), path.c_str()) != 0) {
+        std::remove(temp.c_str());
+        return "No se pudo finalizar el archivo de estado.";
+    }
+    return "";
+}
+std::string loadState(int slot) {
+    if (!gameLoaded || slot < 0 || slot > 9) return "No hay juego o ranura válida.";
+    const size_t n = retro_serialize_size();
+    if (n == 0 || n > 4u * 1024u * 1024u) return "Estados no soportados.";
+    std::ifstream file(statePath(slot), std::ios::binary | std::ios::ate);
+    if (!file) return "No existe un estado guardado en esta ranura.";
+    if (file.tellg() != static_cast<std::streamoff>(n))
+        return "Este estado no es compatible con la versión del núcleo.";
+    file.seekg(0);
+    std::vector<uint8_t> data(n);
+    if (!file.read(reinterpret_cast<char *>(data.data()), static_cast<std::streamsize>(n)))
+        return "No se pudo leer el estado.";
+    if (!retro_unserialize(data.data(), data.size()))
+        return "Gambatte rechazó el estado guardado.";
+    return "";
+}
 std::string fromJString(JNIEnv *env, jstring str) {
     if (!str) return {};
     const char *s = env->GetStringUTFChars(str, nullptr);
@@ -234,6 +282,16 @@ Java_com_ylports_deltaandroid_EmulatorBridge_step(JNIEnv *env, jobject,
     const size_t len = std::min(static_cast<size_t>(env->GetArrayLength(sound)), samples.size());
     if (len) env->SetShortArrayRegion(sound, 0, static_cast<jsize>(len), samples.data());
     return static_cast<jint>(len);
+}
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_ylports_deltaandroid_EmulatorBridge_saveState(JNIEnv *env, jobject, jint slot) {
+    const auto error = saveState(slot);
+    return error.empty() ? nullptr : env->NewStringUTF(error.c_str());
+}
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_ylports_deltaandroid_EmulatorBridge_loadState(JNIEnv *env, jobject, jint slot) {
+    const auto error = loadState(slot);
+    return error.empty() ? nullptr : env->NewStringUTF(error.c_str());
 }
 extern "C" JNIEXPORT void JNICALL
 Java_com_ylports_deltaandroid_EmulatorBridge_flushSave(JNIEnv *, jobject) {
