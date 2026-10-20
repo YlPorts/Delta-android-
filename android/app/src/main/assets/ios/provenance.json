@@ -111,6 +111,10 @@
     "source": "Resources/Assets.xcassets/SettingsButton.imageset/gear_1.pdf",
     "sha256": "85d6a563793b61c83104809197836680b696b5b177c3744aef15ad893244cd25"
   },
+  "res/drawable-nodpi/delta_app_icon.png": {
+    "source": "Resources/Icons.xcassets/Modern/ModernIcon.appiconset/Icon1024.png",
+    "sha256": "755b85d9ac224d659d502d6113d7cdbbc019cd3da992b71fd4e6fa7b5c5a340e"
+  },
   "assets/skins/gbc.deltaskin": {
     "source": "Cores/GBCDeltaCore/GBCDeltaCore/Controller Skin/Standard.deltaskin",
     "sha256": "a56c9cdf6c4bf23b31efd6df58810b7fc62cf3f795a93108eb2a587e025c6654"

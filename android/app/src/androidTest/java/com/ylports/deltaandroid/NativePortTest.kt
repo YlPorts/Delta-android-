@@ -45,7 +45,8 @@ class NativePortTest {
     private fun screenshot(name: String) {
         require(name.matches(Regex("[a-z0-9-]+")))
         instrument.waitForIdleSync()
-        Thread.sleep(350)
+        // Let native window/back transitions and the first blur shader settle.
+        Thread.sleep(1200)
         // UTP may uninstall the tested APK before Gradle returns. Shell-owned
         // captures survive teardown and are pulled before the AVD shuts down.
         shell("mkdir -p /data/local/tmp/delta-screenshots")

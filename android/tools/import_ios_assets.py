@@ -32,6 +32,8 @@ for original, android in [('BoxArt','box_art'), ('DeltaPlaceholder','delta_place
             density = {'1x':'mdpi','2x':'xhdpi','3x':'xxhdpi'}[item['scale']]
             copy(directory/item['filename'], OUT/f'res/drawable-{density}/delta_{android}.png')
 copy(CATALOG/'SettingsButton.imageset/gear_1.pdf', OUT/'assets/ios/settings.pdf')
+copy(ROOT/'Resources/Icons.xcassets/Modern/ModernIcon.appiconset/Icon1024.png',
+     OUT/'res/drawable-nodpi/delta_app_icon.png')
 for system, module, subdir in [('gbc','GBCDeltaCore','GBCDeltaCore'),
  ('nes','NESDeltaCore','NESDeltaCore'), ('gba','GBADeltaCore','GBADeltaCore'),
  ('snes','SNESDeltaCore','SNESDeltaCore'), ('n64','N64DeltaCore','N64DeltaCore'),

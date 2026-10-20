@@ -21,6 +21,8 @@ class DeltaUi(val context: Context) {
     val label get() = if (dark) Color.WHITE else Color.BLACK
     val secondary get() = if (dark) Color.rgb(152,152,160) else Color.rgb(110,110,115)
     val accent get() = OriginalDeltaColors.purple
+    val navigationTypeface: Typeface get() = if (Build.VERSION.SDK_INT >= 28)
+        Typeface.create(Typeface.DEFAULT,600,false) else Typeface.create("sans-serif-medium",Typeface.NORMAL)
     fun rounded(color: Int, radius: Float = 10f) = GradientDrawable().apply {
         setColor(color); cornerRadius = dp(radius).toFloat()
     }
@@ -42,6 +44,7 @@ class DeltaUi(val context: Context) {
         }
         bar.addView(text(title, 17f, if (darkBar) Color.WHITE else label, true).apply {
             gravity = Gravity.CENTER; maxLines = 1
+            typeface = navigationTypeface
         }, FrameLayout.LayoutParams(-1, dp(44)).apply { setMargins(dp(95), 0, dp(95), 0) })
         if (left != null) bar.addView(left, FrameLayout.LayoutParams(-2, dp(44), Gravity.START or Gravity.CENTER_VERTICAL))
         if (right != null) bar.addView(right, FrameLayout.LayoutParams(-2, dp(44), Gravity.END or Gravity.CENTER_VERTICAL))

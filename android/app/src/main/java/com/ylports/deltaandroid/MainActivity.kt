@@ -478,8 +478,10 @@ class MainActivity : Activity() {
             setOnClickListener { }
         }
         panel.addView(ui.navigation("Paused",true,
-            ui.link("Main Menu",Color.rgb(255,69,58)) { modal?.dismiss(); modal = null; showLibrary() },
-            ui.link("Resume",OriginalDeltaColors.lightPurple) { resumeGame() }))
+            ui.link("Main Menu",Color.rgb(255,69,58)) { modal?.dismiss(); modal = null; showLibrary() }
+                .apply { typeface = ui.navigationTypeface },
+            ui.link("Resume",OriginalDeltaColors.purple) { resumeGame() }
+                .apply { typeface = ui.navigationTypeface }))
         val identity = FrameLayout(this)
         val identityStack = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
