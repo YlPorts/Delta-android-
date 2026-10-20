@@ -1,6 +1,11 @@
 name: Delta Android ARM64 (development)
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-arm64.yml'
   push:
     branches: [android/native-bootstrap]
     paths:
