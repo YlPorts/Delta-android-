@@ -59,6 +59,18 @@
     "source": "Resources/Assets.xcassets/Pause Icons/CheatCodes.imageset/cheats@3x.png",
     "sha256": "4d148bb6c62094c69ac7bd66fe2900e11b96afed0dd348c137b8cef44bfb4888"
   },
+  "res/drawable-mdpi/delta_pause.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/Pause.imageset/Pause.png",
+    "sha256": "e322694a2fba82c9c4f686b4a297a7a5575e065acb51f826307feafb811357c9"
+  },
+  "res/drawable-xhdpi/delta_pause.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/Pause.imageset/Pause@2x.png",
+    "sha256": "6125f35f0c929ddf2b9506567dc64f1bfc359e1ea24752014c73bf179d89c6c8"
+  },
+  "res/drawable-xxhdpi/delta_pause.png": {
+    "source": "Resources/Assets.xcassets/Pause Icons/Pause.imageset/Pause@3x.png",
+    "sha256": "09186311a1d53d7f58104ace592a77b26bb2d52af19edf4ba8e2dee93f5bd1d7"
+  },
   "res/drawable-mdpi/delta_fast_forward.png": {
     "source": "Resources/Assets.xcassets/Pause Icons/FastForward.imageset/FastForward.png",
     "sha256": "ecd603b9ac803e8c21ea88bb4f859b6b26d9891d87232860bd5fcb02b97d665b"

@@ -22,7 +22,7 @@ def copy(source, dest):
 
 for original, android in [('BoxArt','box_art'), ('DeltaPlaceholder','delta_placeholder'),
  ('SaveSaveState','save_state'), ('LoadSaveState','load_state'), ('CheatCodes','cheat_codes'),
- ('FastForward','fast_forward'), ('SustainButtons','sustain_buttons'), ('Screenshot','screenshot')]:
+ ('Pause','pause'), ('FastForward','fast_forward'), ('SustainButtons','sustain_buttons'), ('Screenshot','screenshot')]:
     directories = list(CATALOG.rglob(original+'.imageset'))
     if len(directories) != 1:
         raise ValueError(f'Expected exactly one original {original} imageset')

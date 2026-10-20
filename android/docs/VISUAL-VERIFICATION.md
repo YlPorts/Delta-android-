@@ -14,6 +14,7 @@ iOS 26-specific views; those are not yet reproduced.
 | Empty/search text | GamesViewController.prepare/prepareSearchController | Original wording and FAQ action |
 | Settings | Settings.storyboard | 34pt large title, 17pt rows, 51pt reference row height, inset groups/separators |
 | Pause | PauseMenu.storyboard + GridMenuViewController | Original six images/order, 90pt cell, 78pt image, 16pt corner, 20pt gaps/insets |
+| Pause identity | PausePresentationControllerContentView.xib | Original Pause 64x80 image, 15pt gap, 28pt game title above the menu |
 | Skins | DeltaCore ControllerSkin + GameViewController | Original archives, trait fallbacks, bottom portrait controller and aspect-fit app screen |
 
 Source points map to Android dp; default type sizes map to sp. Font rasterization,

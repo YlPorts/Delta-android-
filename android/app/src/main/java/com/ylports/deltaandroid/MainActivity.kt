@@ -463,6 +463,19 @@ class MainActivity : Activity() {
         panel.addView(ui.navigation("Paused",true,
             ui.link("Main Menu",Color.rgb(255,69,58)) { modal?.dismiss(); modal = null; showLibrary() },
             ui.link("Resume",OriginalDeltaColors.lightPurple) { resumeGame() }))
+        val identity = FrameLayout(this)
+        val identityStack = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(15),dp(15),dp(15),dp(15))
+        }
+        val pauseIcon = ui.icon(R.drawable.delta_pause,80,Color.WHITE)
+        identityStack.addView(pauseIcon,LinearLayout.LayoutParams(dp(64),dp(80)))
+        identityStack.addView(ui.text(activeGame!!.title,28f,Color.WHITE).apply {
+            gravity = Gravity.CENTER; maxLines = 2
+            setPadding(0,dp(15),0,0)
+        },LinearLayout.LayoutParams(-1,-2))
+        identity.addView(identityStack,FrameLayout.LayoutParams(-1,-2,Gravity.CENTER))
+        overlay.addView(identity,FrameLayout.LayoutParams(-1,0,Gravity.TOP))
         val grid = DeltaGrid(this,90,10,20,20,true)
         data class PauseAction(val title: String,val icon: Int,val selected: Boolean = false,val run: () -> Unit)
         val actions = listOf(
@@ -501,6 +514,13 @@ class MainActivity : Activity() {
         val scroll = ScrollView(this).apply { addView(grid) }
         panel.addView(scroll,LinearLayout.LayoutParams(-1,-2))
         overlay.addView(panel,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM))
+        overlay.addOnLayoutChangeListener { _,_,_,_,_,_,_,_,_ ->
+            val available = (overlay.height-panel.height).coerceAtLeast(0)
+            if (identity.layoutParams.height != available) {
+                identity.layoutParams = FrameLayout.LayoutParams(-1,available,Gravity.TOP)
+                pauseIcon.visibility = if (available < dp(140)) View.GONE else View.VISIBLE
+            }
+        }
         gameContainer?.addView(overlay,FrameLayout.LayoutParams(-1,-1)); pauseOverlay = overlay
         panel.translationY = dp(45).toFloat(); panel.alpha = .3f
         panel.animate().translationY(0f).alpha(1f).setDuration(250).start()
