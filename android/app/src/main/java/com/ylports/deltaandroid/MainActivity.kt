@@ -36,9 +36,9 @@ class MainActivity : Activity() {
         private const val SELECT_ROM = 101
         private const val SELECT_SKIN = 102
         private const val SELECT_ARTWORK = 103
-        private val BACKGROUND = Color.rgb(16, 17, 21)
+        private val BACKGROUND = OriginalDeltaColors.darkGray
         private val SURFACE = Color.rgb(34, 35, 43)
-        private val ACCENT = Color.rgb(121, 83, 231)
+        private val ACCENT = OriginalDeltaColors.purple
     }
 
     private val library by lazy { GameLibrary(this) }
@@ -138,14 +138,14 @@ class MainActivity : Activity() {
         })
         val gear = text("⚙", 27f).apply {
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(186, 176, 241))
+            setTextColor(OriginalDeltaColors.lightPurple)
             contentDescription = "Settings"
             setOnClickListener { showSettings() }
         }
         bar.addView(gear, FrameLayout.LayoutParams(dp(56), dp(54), Gravity.START or Gravity.CENTER_VERTICAL))
         val plus = text("+", 33f).apply {
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(186, 176, 241))
+            setTextColor(OriginalDeltaColors.lightPurple)
             contentDescription = "Import"
             setOnClickListener { picker(SELECT_ROM) }
         }
@@ -353,7 +353,7 @@ class MainActivity : Activity() {
         }, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(54)))
         toolbar.addView(text("Done", 17f, true).apply {
-            setTextColor(Color.rgb(183, 174, 250))
+            setTextColor(OriginalDeltaColors.lightPurple)
             gravity = Gravity.CENTER
             setOnClickListener { showLibrary() }
         }, FrameLayout.LayoutParams(dp(74), dp(54), Gravity.END or Gravity.CENTER_VERTICAL))
