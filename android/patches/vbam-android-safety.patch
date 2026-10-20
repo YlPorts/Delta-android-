@@ -1,0 +1,36 @@
+diff --git a/src/gba/GBAcpu.h b/src/gba/GBAcpu.h
+index 5386c0ac..7394b04e 100644
+--- a/src/gba/GBAcpu.h
++++ b/src/gba/GBAcpu.h
+@@ -5,7 +5,7 @@ extern int armExecute();
+ extern int thumbExecute();
+ 
+ #ifdef __GNUC__
+-#ifndef __APPLE__
++#if defined(__i386__) && !defined(__APPLE__)
+ #define INSN_REGPARM __attribute__((regparm(1)))
+ #else
+ #define INSN_REGPARM /*nothing*/
+diff --git a/src/libretro/libretro.cpp b/src/libretro/libretro.cpp
+index eec4a3ac..7ebbe584 100644
+--- a/src/libretro/libretro.cpp
++++ b/src/libretro/libretro.cpp
+@@ -243,6 +243,7 @@ static size_t wram_size(void)
+         // the switching bank properly in GBC mode. This is to avoid possible incorrect reads.
+         // For cheevos purposes, this bank is accessed using retro_memory_descriptor instead.
+         return gbCgbMode ? 0x1000 : 0x2000;
++    return 0;
+ }
+ 
+ static void* vram_ptr(void)
+@@ -1128,7 +1129,9 @@ void retro_cheat_set(unsigned index, bool enabled, const char* code)
+    */
+    
+     std::string codeLine = code;
+-    std::string name = "cheat_" + index;
++    char nameBuffer[32];
++    snprintf(nameBuffer, sizeof(nameBuffer), "cheat_%u", index);
++    std::string name(nameBuffer);
+     int matchLength = 0;
+     std::vector<std::string> codeParts;
+     int cursor;

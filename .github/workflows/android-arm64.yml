@@ -1,0 +1,152 @@
+name: Delta Android ARM64 (development)
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths: ['android/**', '!android/docs/**', '!android/README.md', '!android/CHANGELOG.md', '.github/workflows/android-arm64.yml', 'Resources/Assets.xcassets/**']
+  push:
+    branches: [android/native-bootstrap]
+    paths: ['android/**', '!android/docs/**', '!android/README.md', '!android/CHANGELOG.md', '.github/workflows/android-arm64.yml', 'Resources/Assets.xcassets/**']
+permissions:
+  contents: read
+concurrency:
+  group: delta-native-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {submodules: false, lfs: false}
+      - name: Prepare pinned sources and original resources
+        run: |
+          python3 android/tools/build_cores.py --prepare
+          python3 android/tools/import_ios_colors.py
+          python3 android/tools/import_ios_assets.py
+          python3 -m unittest discover -s android/tools/tests -p 'test_*.py'
+      - name: Execute real engines through the production host with ASan and UBSan
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p android/build/ci-logs
+          python3 android/tools/build_cores.py --host-tests --jobs 2 2>&1 | tee android/build/ci-logs/host-tests.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: DeltaAndroid-host-test-logs
+          path: android/build/ci-logs/
+          if-no-files-found: ignore
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: {submodules: false, lfs: false}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: Install pinned SDK and NDK
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Build Gambatte, original Nestopia and VBA-M for ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p android/build/ci-logs
+          python3 android/tools/build_cores.py --prepare --abi arm64-v8a --jobs 2 2>&1 | tee android/build/ci-logs/cores-arm64.log
+      - name: Package authentic iOS colors, icons, skins and licenses
+        run: |
+          python3 android/tools/import_ios_colors.py
+          python3 android/tools/import_ios_assets.py
+          python3 -m unittest discover -s android/tools/tests -p 'test_*.py'
+      - name: Compile Kotlin, JNI and development APK; run lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --project-dir android :app:assembleDebug :app:lintDebug --no-daemon --max-workers=2 2>&1 | tee android/build/ci-logs/gradle-arm64.log
+      - name: Verify packaged engines, ABI, licenses and 16KB ELF alignment
+        run: |
+          python3 android/tools/verify_apk.py android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 android/app/build/outputs/apk/debug/app-debug.apk > android/build/ci-logs/apk-alignment.log
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Bundle corresponding source and exact revisions
+        run: python3 android/tools/source_bundle.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeltaAndroid-0.3.0-dev-arm64
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeltaAndroid-0.3.0-dev-source
+          path: android/build/corresponding-source/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: DeltaAndroid-arm64-reports
+          path: |
+            android/build/ci-logs/
+            android/app/build/reports/
+            android/app/.cxx/**/CMakeFiles/CMakeError.log
+          if-no-files-found: ignore
+  android-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with: {submodules: false, lfs: false}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: Install SDK and NDK
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Prepare actual cores and test-only diagnostic programs
+        run: |
+          python3 android/tools/build_cores.py --prepare --abi x86_64 --jobs 2
+          python3 android/tools/import_ios_colors.py
+          python3 android/tools/import_ios_assets.py
+          python3 android/tools/tests/diagnostic_roms.py android/app/build/generated/androidTestAssets
+          gradle --project-dir android -PdeltaAbi=x86_64 :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon --max-workers=2
+      - name: Enable KVM for the disposable Android test device
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Exercise native JNI and user flows; capture actual Android screens
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb shell settings put system accelerometer_rotation 0
+            adb shell settings put secure ui_night_mode 2
+            adb shell settings put secure immersive_mode_confirmations confirmed
+            bash android/tools/run_emulator_tests.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: DeltaAndroid-runtime-screenshots-and-reports
+          path: |
+            android/build/runtime/
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
