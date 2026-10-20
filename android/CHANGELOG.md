@@ -8,7 +8,8 @@
   replace the pause list with a native grid and real actions.
 - Fix portrait skin/game placement, legacy `gameScreenFrame`, representation
   fallbacks, per-edge hit inheritance, bounded asset decoding and skin preferences.
-- Add a modular system registry and the real Nestopia adapter from NESDeltaCore.
+- Add a modular system registry, real Nestopia from NESDeltaCore and VBA-M from
+  the original GBADeltaCore engine, with recorded Android portability fixes.
   Preserve Gambatte and every remaining original engine on the roadmap.
 - Protect SRAM/RTC with atomic replacement; bind new states to ROM/core and check
   integrity, retaining legacy states and protecting current state on rejection.
@@ -20,4 +21,5 @@
 
 Development build only. Complete visual parity, iOS state/sync interoperability,
 commercial game compatibility and physical Galaxy A15 tests remain unverified.
-GBA, SNES, Genesis, N64 and DS are not yet playable.
+SNES, Genesis, N64 and DS are not yet playable. GBA battery-type/game coverage
+remains broader than the authored SRAM diagnostic.

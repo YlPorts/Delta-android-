@@ -21,6 +21,8 @@ class EmulatorView(context: Context, val system: String = "gbc") : View(context)
         const val LEFT = 1 shl 6
         const val RIGHT = 1 shl 7
         const val A = 1 shl 8
+        const val L = 1 shl 10
+        const val R = 1 shl 11
         fun mapPhysicalKey(key: Int): Int = when (key) {
             android.view.KeyEvent.KEYCODE_DPAD_UP -> UP
             android.view.KeyEvent.KEYCODE_DPAD_DOWN -> DOWN
@@ -28,6 +30,8 @@ class EmulatorView(context: Context, val system: String = "gbc") : View(context)
             android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> RIGHT
             android.view.KeyEvent.KEYCODE_BUTTON_A, android.view.KeyEvent.KEYCODE_Z -> A
             android.view.KeyEvent.KEYCODE_BUTTON_B, android.view.KeyEvent.KEYCODE_X -> B
+            android.view.KeyEvent.KEYCODE_BUTTON_L1 -> L
+            android.view.KeyEvent.KEYCODE_BUTTON_R1 -> R
             android.view.KeyEvent.KEYCODE_BUTTON_START, android.view.KeyEvent.KEYCODE_ENTER -> START
             android.view.KeyEvent.KEYCODE_BUTTON_SELECT, android.view.KeyEvent.KEYCODE_BACKSLASH -> SELECT
             else -> 0
@@ -170,7 +174,8 @@ class EmulatorView(context: Context, val system: String = "gbc") : View(context)
                         queued += length
                         drainAudio()
                     }
-                    due += if (fastForward) frameNs / 2 else frameNs
+                    val speed = if (fastForward) 2 else 1
+                    due += frameNs / speed
                     while (running) {
                         val remaining = due - System.nanoTime()
                         if (remaining <= 0) break
@@ -251,7 +256,7 @@ class EmulatorView(context: Context, val system: String = "gbc") : View(context)
         }
     }
     private fun buttonForInput(input: String) = when (input.lowercase()) {
-        "a" -> A; "b" -> B; "select" -> SELECT; "start" -> START
+        "a" -> A; "b" -> B; "l" -> L; "r" -> R; "select" -> SELECT; "start" -> START
         "up" -> UP; "down" -> DOWN; "left" -> LEFT; "right" -> RIGHT
         else -> 0
     }

@@ -19,6 +19,10 @@ int main(int argc, char **argv) {
         const std::string lib=argv[1], rom=argv[2], directory=argv[3];
         auto error = openCore(lib,rom,directory);
         require(error.empty(),error);
+        if (retro_cheat_set && retro_cheat_reset) {
+            retro_cheat_set(127, false, ""); // exercise index handling without enabling a cheat
+            retro_cheat_reset();
+        }
         run(180);
         require(frameWidth >= 160 && frameHeight >= 144,"No framebuffer");
         require(samples.size() > 0,"No PCM audio");

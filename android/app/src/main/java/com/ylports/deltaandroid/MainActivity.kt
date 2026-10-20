@@ -119,11 +119,15 @@ class MainActivity : Activity() {
                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
         if (Build.VERSION.SDK_INT >= 30) {
             window.setDecorFitsSystemWindows(false)
-            window.insetsController?.apply {
-                if (immersive) hide(WindowInsets.Type.systemBars()) else show(WindowInsets.Type.systemBars())
-                systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                setSystemBarsAppearance(if (inSettings && !ui.dark) android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
-                    android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
+            // Window.getInsetsController() can dereference a null DecorView
+            // during onCreate. Configure only the attached native content view.
+            root.post {
+                root.windowInsetsController?.apply {
+                    if (immersive) hide(WindowInsets.Type.systemBars()) else show(WindowInsets.Type.systemBars())
+                    systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    setSystemBarsAppearance(if (inSettings && !ui.dark) android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
+                        android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
+                }
             }
         }
         // Android 15+ enforces edge-to-edge; keep library/settings inside real insets.
@@ -396,7 +400,7 @@ class MainActivity : Activity() {
         ui.sheet(core.title,body)
     }
     private fun showBuildInfo() {
-        val body = ui.text("${BuildConfig.VERSION_NAME}\nARM64 native build\n\nGB/GBC: Gambatte\nNES: Nestopia\n\nGBA, SNES, Genesis, N64 and DS: pending.\nDelta Sync: unavailable.\n\niOS reference: Delta 2.0b5 (163), UIKit grid UI.\nVisual 1:1 parity and Galaxy A15 validation remain pending.",15f).apply { setPadding(dp(20),dp(20),dp(20),dp(20)) }
+        val body = ui.text("${BuildConfig.VERSION_NAME}\nARM64 native build\n\nGB/GBC: Gambatte\nNES: Nestopia\nGBA: VBA-M\n\nSNES, Genesis, N64 and DS: pending.\nDelta Sync: unavailable.\n\niOS reference: Delta 2.0b5 (163), UIKit grid UI.\nVisual 1:1 parity and Galaxy A15 validation remain pending.",15f).apply { setPadding(dp(20),dp(20),dp(20),dp(20)) }
         ui.sheet("Build Information",body)
     }
     private fun showLicenses() {
@@ -432,7 +436,7 @@ class MainActivity : Activity() {
         }
         player.onQuickSave = { quickState(true) }
         player.onQuickLoad = { quickState(false) }
-        player.onFailure = { showPauseMenu(); error("Emulation Error",it) }
+        player.onFailure = { if (!isDestroyed && !isFinishing && activeGame?.id == game.id) { showPauseMenu(); error("Emulation Error",it) } }
         emulator = player
         gameContainer = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
@@ -552,7 +556,7 @@ class MainActivity : Activity() {
     private fun showCheats() {
         val game = activeGame ?: return
         val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16),dp(16),dp(16),dp(20)) }
-        body.addView(ui.text("Game Genie / GameShark",17f))
+        body.addView(ui.text(if (game.core.id == "gba") "GameShark / Code Breaker" else "Game Genie / GameShark",17f))
         val input = EditText(this).apply {
             setText(cheats(game).joinToString("\n")); setTextColor(ui.label)
             hint = "One code per line"; setHintTextColor(ui.secondary)
@@ -563,7 +567,8 @@ class MainActivity : Activity() {
         val group = ui.section(body,"Cheat Codes")
         ui.row(group,"Apply Codes") {
             val codes = input.text.toString().uppercase().lineSequence().map(String::trim).filter(String::isNotEmpty).toList()
-            val valid = if (game.core.id == "gbc") Regex("(?:[0-9A-F]{8}|[0-9A-F]{3}-[0-9A-F]{3}(?:-[0-9A-F]{3})?)") else Regex("(?:[APZLGITYEOXUKSVN]{6}|[APZLGITYEOXUKSVN]{8}|[0-9A-F]{4}:[0-9A-F]{2})")
+            val valid = if (game.core.id == "gba") Regex("(?:[0-9A-F]{8} ?[0-9A-F]{8}|[0-9A-F]{8} ?[0-9A-F]{4})")
+                else if (game.core.id == "gbc") Regex("(?:[0-9A-F]{8}|[0-9A-F]{3}-[0-9A-F]{3}(?:-[0-9A-F]{3})?)") else Regex("(?:[APZLGITYEOXUKSVN]{6}|[APZLGITYEOXUKSVN]{8}|[0-9A-F]{4}:[0-9A-F]{2})")
             if (codes.size > 128 || codes.any { !valid.matches(it) }) error("Cheat Codes","A code has an invalid format.")
             else {
                 val result = EmulatorBridge.setCheats(codes.toTypedArray())

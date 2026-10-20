@@ -52,9 +52,26 @@ def prepare():
     actual = subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT/'Cores/NESDeltaCore',text=True).strip()
     if actual != LOCK['nestopia']['parent_revision']:
         raise RuntimeError('Unexpected NESDeltaCore source revision; update the lock after review')
+    run('git','submodule','update','--init','visualboyadvance-m',cwd=ROOT/'Cores/GBADeltaCore')
+    original_vbam = ROOT/'Cores/GBADeltaCore/visualboyadvance-m'
+    actual = subprocess.check_output(['git','rev-parse','HEAD'],cwd=original_vbam,text=True).strip()
+    if actual != LOCK['vbam']['revision']: raise RuntimeError('Unexpected original VBA-M revision')
+    vbam = EXTERNAL/'vbam'
+    if not vbam.exists(): run('git','clone','--shared',original_vbam,vbam)
+    if subprocess.check_output(['git','rev-parse','HEAD'],cwd=vbam,text=True).strip() != actual:
+        raise RuntimeError('Unexpected cached VBA-M revision')
+    patch = ROOT/LOCK['vbam']['patch']
+    check = subprocess.run(['git','apply','--check',str(patch)],cwd=vbam,capture_output=True)
+    if check.returncode == 0: run('git','apply',patch,cwd=vbam)
+    else: run('git','apply','--reverse','--check',patch,cwd=vbam)
     license_dir = ROOT/'android/app/src/main/assets/licenses'
     license_dir.mkdir(parents=True,exist_ok=True)
     shutil.copyfile(source/'COPYING',license_dir/'Gambatte-GPL-2.0.txt')
+    (license_dir/'VBA-M-GPL-2.0.txt').write_text((vbam/'doc/License.txt').read_text()+'\n\n'+(source/'COPYING').read_text())
+    audio=(vbam/'src/apu/Gb_Apu.cpp').read_text()
+    begin=audio.index('/* Copyright')
+    end=audio.index('*/',begin)+2
+    (license_dir/'VBA-M-Audio-Notices.txt').write_text(audio[begin:end]+'\n')
     nes_license = ROOT/'Cores/NESDeltaCore/nestopia/COPYING'
     if not nes_license.exists(): nes_license = ROOT/'Cores/NESDeltaCore/nestopia/COPYING.txt'
     if not nes_license.exists(): raise RuntimeError('Missing original Nestopia license')
@@ -67,11 +84,13 @@ def build(abi, jobs):
     destination = ROOT/f'android/app/src/main/jniLibs/{abi}'
     destination.mkdir(parents=True,exist_ok=True)
     for name, path in [('gambatte',EXTERNAL/'gambatte/libgambatte/libretro/jni'),
-                       ('nestopia',ROOT/'Cores/NESDeltaCore/nestopia/libretro/jni')]:
+                       ('nestopia',ROOT/'Cores/NESDeltaCore/nestopia/libretro/jni'),
+                       ('vbam',EXTERNAL/'vbam/src/libretro/jni')]:
         output = EXTERNAL/f'build/{name}/{abi}'
         # Nestopia's original source explicitly targets GNU C++98. Using the
         # NDK's newer default C++ standard rejects intentional byte packing.
         flags = ['APP_CPPFLAGS=-std=gnu++98'] if name == 'nestopia' else []
+        if name == 'vbam': flags = ['NDK_TOOLCHAIN_VERSION=clang','APP_CPPFLAGS=-std=gnu++98 -DNO_DEBUGGER']
         run(ndk/'ndk-build','-C',path,f'APP_ABI={abi}','APP_PLATFORM=android-24',
             'APP_STL=c++_static','APP_SUPPORT_FLEXIBLE_PAGE_SIZES=true',*flags,
             f'NDK_OUT={output}/obj',f'NDK_LIBS_OUT={output}/libs',f'-j{jobs}')
@@ -84,13 +103,15 @@ def host_tests(jobs):
     run(sys.executable,ROOT/'android/tools/tests/diagnostic_roms.py',test_dir)
     run('make','-C',EXTERNAL/'gambatte','-f','Makefile.libretro',f'-j{jobs}')
     run('make','-C',ROOT/'Cores/NESDeltaCore/nestopia/libretro',f'-j{jobs}')
+    run('make','-C',EXTERNAL/'vbam/src/libretro',f'-j{jobs}')
     binary = test_dir/'core-host-test'
     run('g++','-std=c++17','-Wall','-Wextra','-Werror','-fsanitize=address,undefined',
         '-fno-omit-frame-pointer',ROOT/'android/tools/tests/core_host_test.cpp','-ldl','-pthread','-o',binary)
     for name, source, rom in [('gambatte',EXTERNAL/'gambatte/gambatte_libretro.so','diagnostic.gb'),
                              ('gambatte',EXTERNAL/'gambatte/gambatte_libretro.so','diagnostic.gbc'),
                              ('gambatte',EXTERNAL/'gambatte/gambatte_libretro.so','diagnostic-rtc.gb'),
-                             ('nestopia',ROOT/'Cores/NESDeltaCore/nestopia/libretro/nestopia_libretro.so','diagnostic.nes')]:
+                             ('nestopia',ROOT/'Cores/NESDeltaCore/nestopia/libretro/nestopia_libretro.so','diagnostic.nes'),
+                             ('vbam',EXTERNAL/'vbam/src/libretro/vbam_libretro.so','diagnostic.gba')]:
         # Reset fixtures between repeated invocations; these are generated test-only files.
         for extra in test_dir.glob(rom+'.*'): extra.unlink()
         run(binary,source,test_dir/rom,test_dir)

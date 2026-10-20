@@ -8,5 +8,12 @@
     "path": "Cores/NESDeltaCore/nestopia",
     "parent_revision": "c88ef1e7c68ad723194d1b691362ac7d7394f968",
     "role": "Exact Nestopia source and libretro adapter vendored by the original NESDeltaCore submodule"
+  },
+  "vbam": {
+    "path": "Cores/GBADeltaCore/visualboyadvance-m",
+    "parent_revision": "869c34aeca9dd2b3fbd329092bb2743b0ae80c98",
+    "revision": "453fa0decf179360926fb417725a794aa496d6e3",
+    "patch": "android/patches/vbam-android-safety.patch",
+    "role": "Exact VBA-M engine from original GBADeltaCore; Android adapter fixes are recorded in the patch"
   }
 }

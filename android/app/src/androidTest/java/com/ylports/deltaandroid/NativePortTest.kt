@@ -57,12 +57,12 @@ class NativePortTest {
         assertEquals(Color.rgb(139,40,247),OriginalDeltaColors.purple)
         assertEquals(Color.rgb(214,188,255),OriginalDeltaColors.lightPurple)
         assertEquals(Color.rgb(38,38,38),OriginalDeltaColors.darkGray)
-        for (system in listOf("gbc","nes")) for (landscape in listOf(false,true)) {
+        for (system in listOf("gbc","nes","gba")) for (landscape in listOf(false,true)) {
             val skin = SkinPackage.load(context,landscape,system)
             assertNotNull(skin.artwork)
             assertTrue(skin.controls.any { "a" in it.inputs })
             val g = skin.geometry(if (landscape) 812f else 390f,if (landscape) 375f else 844f)
-            if (!landscape) {
+            if (!landscape && skin.screens.none { !it.appPlacement }) {
                 assertEquals(844f,g.controller.bottom,.01f)
                 assertTrue(g.available.height() > 0)
                 assertEquals(g.available.bottom,g.controller.top,.01f)
@@ -118,7 +118,7 @@ class NativePortTest {
         }
     }
     @Test fun c_realJniFramesAudioInputAndStates() {
-        for ((extension,lib) in listOf("gb" to "libgambatte_libretro.so","nes" to "libnestopia_libretro.so")) {
+        for ((extension,lib) in listOf("gb" to "libgambatte_libretro.so","nes" to "libnestopia_libretro.so","gba" to "libvbam_libretro.so")) {
             val rom = fixture(extension)
             val failure = EmulatorBridge.open(File(context.applicationInfo.nativeLibraryDir,lib).absolutePath,
                 rom.absolutePath,context.filesDir.absolutePath)
@@ -148,6 +148,7 @@ class NativePortTest {
         val library = GameLibrary(context)
         val game = library.importGame(Uri.fromFile(fixture("gb")))
         library.importGame(Uri.fromFile(fixture("nes")))
+        library.importGame(Uri.fromFile(fixture("gba")))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             screenshot("03-library-games")
             // Select the GB console via the same native page control used by users.

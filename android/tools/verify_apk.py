@@ -10,7 +10,7 @@ import tempfile
 import zipfile
 
 p=argparse.ArgumentParser(); p.add_argument('apk'); p.add_argument('--abi',default='arm64-v8a'); args=p.parse_args()
-expected={'libdelta_android.so','libgambatte_libretro.so','libnestopia_libretro.so'}
+expected={'libdelta_android.so','libgambatte_libretro.so','libnestopia_libretro.so','libvbam_libretro.so'}
 with zipfile.ZipFile(args.apk) as archive, tempfile.TemporaryDirectory() as tmp:
     files=[n for n in archive.namelist() if n.startswith('lib/') and n.endswith('.so')]
     actual={Path(n).name for n in files}
@@ -40,4 +40,7 @@ with zipfile.ZipFile(args.apk) as archive, tempfile.TemporaryDirectory() as tmp:
     assert not any(n.lower().endswith(('.gb','.gbc','.nes','.gba','.nds','.bios')) for n in archive.namelist()),'ROM/firmware in APK'
     assert 'assets/licenses/Gambatte-GPL-2.0.txt' in archive.namelist()
     assert 'assets/licenses/Nestopia-GPL-2.0.txt' in archive.namelist()
+    assert 'assets/licenses/VBA-M-GPL-2.0.txt' in archive.namelist()
+    assert 'assets/licenses/VBA-M-Audio-LGPL-2.1.txt' in archive.namelist()
+    assert 'assets/licenses/VBA-M-Audio-Notices.txt' in archive.namelist()
     print('PASS: engines, ABI, alignment, original skins, licenses, no ROM/BIOS assets')

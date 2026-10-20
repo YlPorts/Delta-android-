@@ -40,6 +40,19 @@ def nes() -> bytes:
     rom.extend(bytes([0xaa,0x55])*4096) # authored checkerboard CHR
     return bytes(rom)
 
+def gba() -> bytes:
+    # ARM7TDMI program assembled from gba-diagnostic.s. No proprietary logo.
+    import struct
+    rom = bytearray(8192)
+    struct.pack_into('<I',rom,0,0xea00002e) # branch from cartridge entry to 0xc0
+    rom[0xa0:0xb2] = b'DELTA TEST  DLTA00'
+    rom[0xb2] = 0x96
+    rom[0xbd] = (-sum(rom[0xa0:0xbd])-0x19)&255
+    program = bytes.fromhex('0103a0e398109fe5b010c0e10e54a0e34210a0e30010c5e50040a0e30140c5e58010a0e3b418c0e178109fe5b018c0e10210a0e3b218c0e16c109fe5b216c0e1871ca0e3b416c0e10664a0e35c709fe50010a0e3b210c6e0011081e2070056e1fbffff1ab610d0e1a00051e3fcffff3a014084e20140c5e534809fe5b010d8e10110e0e1011001e20310c5e50664a0e3b040c6e1b610d0e1a00051e3fcffff2aefffffea030400007711000080f00000002c0106300100040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000')
+    rom[0xc0:0xc0+len(program)] = program
+    rom[0x1000:0x1009] = b'SRAM_V110'
+    return bytes(rom)
+
 if __name__ == '__main__':
     import sys
     destination = Path(sys.argv[1]); destination.mkdir(parents=True,exist_ok=True)
@@ -47,3 +60,4 @@ if __name__ == '__main__':
     (destination/'diagnostic.gbc').write_bytes(gb(color=True))
     (destination/'diagnostic-rtc.gb').write_bytes(gb(rtc=True))
     (destination/'diagnostic.nes').write_bytes(nes())
+    (destination/'diagnostic.gba').write_bytes(gba())

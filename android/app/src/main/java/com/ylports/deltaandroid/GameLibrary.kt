@@ -91,7 +91,7 @@ class GameLibrary(private val context: Context) {
         } ?: uri.lastPathSegment.orEmpty()
         val extension = name.substringAfterLast('.', "").lowercase(Locale.ROOT)
         val core = CoreSpec.forExtension(extension)
-        require(core?.playable == true) { "Se admiten .gb, .gbc y .nes; los demás núcleos siguen pendientes." }
+        require(core?.playable == true) { "Se admiten .gb, .gbc, .gba y .nes; los demás núcleos siguen pendientes." }
         val temp = File.createTempFile("rom-import-", ".partial", directory)
         try {
             val digest = MessageDigest.getInstance("SHA-256")
@@ -116,6 +116,9 @@ class GameLibrary(private val context: Context) {
                 val read = input.read(header)
                 if (extension == "nes") require(read >= 16 && header.copyOfRange(0, 4)
                     .contentEquals(byteArrayOf(0x4e, 0x45, 0x53, 0x1a))) { "Cabecera iNES no válida." }
+                else if (extension == "gba") require(read >= 0xc0 && header[0xb2].toInt() and 0xff == 0x96) {
+                    "Cabecera de Game Boy Advance no válida."
+                }
                 else require(read == header.size && temp.length() >= 32768) { "ROM de Game Boy incompleta." }
             }
             val hash = digest.digest().joinToString("") { "%02x".format(it) }

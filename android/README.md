@@ -18,7 +18,10 @@ current development version is **0.3.0-dev**, not a stable or complete release.
   per-orientation skin selection retains previously imported 0.2 GBC packages.
 - Actual **Gambatte GB/GBC** from the existing libretro adapter, now pinned.
 - Actual **Nestopia NES**, compiled from the exact source vendored in Delta's
-  original NESDeltaCore submodule. It is not a different NES emulator.
+  original NESDeltaCore submodule.
+- Actual **VBA-M GBA** from the original GBADeltaCore engine revision. A recorded
+  Android patch limits x86 calling conventions to x86 and fixes unsafe cheat-name
+  arithmetic and an undefined memory-size return. L/R touch and gamepad inputs are mapped.
 - Dynamic native video, the core's actual frame rate, stereo PCM, touchscreen
   multitouch, Bluetooth/USB keys, D-pad and joystick axes, fast forward and held
   buttons. Audio focus loss pauses gameplay.
@@ -31,7 +34,7 @@ current development version is **0.3.0-dev**, not a stable or complete release.
 
 ## Explicitly pending
 
-VBA-M/GBA, Snes9x/SNES, Genesis Plus GX, mupen64plus/N64 and melonDS/DS remain in
+Snes9x/SNES, Genesis Plus GX, mupen64plus/N64 and melonDS/DS remain in
 scope and are not declared functional. DS firmware/BIOS, touch/microphone, 3D and
 layout/runtime integration are still pending. No commercial ROM or BIOS is shipped.
 
@@ -74,7 +77,11 @@ python3 android/tools/verify_apk.py android/app/build/outputs/apk/debug/app-debu
 The core lock is `tools/core-sources.json`; original core revisions are gitlinks.
 The preparer resolves public original Git LFS assets and checks each pointer's
 SHA-256/size. Resource provenance is in the APK's `assets/ios/provenance.json`.
-Nestopia is built with its original GNU C++98 dialect and the modern NDK C++ STL.
+Nestopia and VBA-M use the original GNU C++98-compatible code with the modern NDK C++ STL.
+VBA-M uses the same NO_DEBUGGER/NO_LINK configuration as its original libretro
+target; the old Android makefile omitted NO_DEBUGGER and attempted to link an
+ELF debugger that was absent from its source list. The ARM64 calling-convention
+fix preserves CPU emulation and avoids applying x86 regparm attributes to ARM.
 All native ELF LOAD segments must support 16KB pages. Libraries are compressed
 and extracted at installation so the existing native host can load and fingerprint
 actual files, including on Android 16. No opaque prebuilt engines are downloaded.
@@ -102,15 +109,16 @@ are not a game compatibility suite. Sanitizers cover the host; the upstream core
 binaries are not themselves sanitizer-instrumented in this first test job.
 
 See `docs/VISUAL-VERIFICATION.md` for source measurements and the comparison gaps.
+GBA Flash/EEPROM/RTC game coverage is not established by the SRAM diagnostic.
 A real Galaxy A15 SM-A155M / Android 16 / Mali-G57 MC2 is still required to check
 ARM64 runtime, sustained speed, audio latency, gamepads, cutouts, thermal behavior,
 memory, and process killing. Desktop/emulator checks do not establish those results.
 
 ## License and corresponding source
 
-Delta remains AGPLv3; see `COPYING`. Gambatte and Nestopia retain their original
+Delta remains AGPLv3; see `COPYING`. Gambatte, Nestopia and VBA-M retain their original
 GPL notices; libretro support code retains its own notices. The APK includes
 license texts, and Actions publishes source archives with exact revisions,
-including the complete source-built Gambatte adapter and original submodules.
+including the complete source-built Gambatte and patched VBA-M adapters and original submodules.
 No Apple framework or proprietary font is redistributed. Future engines require
 individual license/source review before distribution.
