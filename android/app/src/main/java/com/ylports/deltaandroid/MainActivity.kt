@@ -125,10 +125,20 @@ class MainActivity : Activity() {
             // Window.getInsetsController() can dereference a null DecorView
             // during onCreate. Configure only the attached native content view.
             root.post {
+                val lightStatus = inSettings && !ui.dark
+                // Keep the decor flag in sync: later platform color-view updates
+                // otherwise restore the dark theme's white status icons.
+                @Suppress("DEPRECATION")
+                run {
+                    val decor = window.decorView
+                    decor.systemUiVisibility = if (lightStatus)
+                        decor.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                    else decor.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+                }
                 root.windowInsetsController?.apply {
                     if (immersive) hide(WindowInsets.Type.systemBars()) else show(WindowInsets.Type.systemBars())
                     systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                    setSystemBarsAppearance(if (inSettings && !ui.dark) android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
+                    setSystemBarsAppearance(if (lightStatus) android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
                         android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
                 }
             }

@@ -53,6 +53,20 @@ class NativePortTest {
         shell("screencap -p $path")
         assertTrue("Screenshot was not preserved", (shell("stat -c %s $path").trim().toLongOrNull() ?: 0) > 100)
     }
+    private fun acknowledgeFullscreenNotice() {
+        val until = android.os.SystemClock.uptimeMillis()+5000
+        while (android.os.SystemClock.uptimeMillis() < until) {
+            val button = instrument.uiAutomation.rootInActiveWindow
+                ?.findAccessibilityNodeInfosByText("Got it")?.firstOrNull { it.isClickable }
+            if (button != null) {
+                assertTrue(button.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
+                instrument.waitForIdleSync()
+                Thread.sleep(250)
+                return
+            }
+            Thread.sleep(100)
+        }
+    }
     private fun fixture(extension: String): File {
         val file = File(context.filesDir,"test-fixtures/Delta Diagnostic.$extension")
         file.parentFile!!.mkdirs()
@@ -164,6 +178,7 @@ class NativePortTest {
             instrument.waitForIdleSync()
             click(scenario,"${game.title}, Game Boy Color")
             Thread.sleep(1000)
+            acknowledgeFullscreenNotice()
             screenshot("04-game-portrait")
             instrument.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
             instrument.waitForIdleSync()

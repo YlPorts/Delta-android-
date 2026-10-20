@@ -139,6 +139,7 @@ jobs:
           script: |
             adb shell settings put system accelerometer_rotation 0
             adb shell settings put secure ui_night_mode 2
+            adb shell settings put secure immersive_mode_confirmations confirmed
             bash android/tools/run_emulator_tests.sh
       - uses: actions/upload-artifact@v4
         if: always()

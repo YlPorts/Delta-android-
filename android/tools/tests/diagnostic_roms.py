@@ -7,14 +7,14 @@ from pathlib import Path
 def gb(color=False, rtc=False) -> bytes:
     rom = bytearray(32768)
     rom[0x100:0x104] = bytes([0xc3,0x50,0x01,0x00])
-    rom[0x134:0x144] = b'DELTA DIAGNOSTIC'
+    rom[0x134:0x144] = b'DELTA TEST'.ljust(16,b'\0')
     rom[0x143] = 0x80 if color else 0
     rom[0x147:0x14a] = bytes([0x10 if rtc else 3,0,2]) # MBC1 + battery + 8KB RAM
     checksum = 0
     for value in rom[0x134:0x14d]: checksum = (checksum-value-1)&255
     rom[0x14d] = checksum
     # Disable LCD; enable battery RAM; initialize tile 0 and palette; enable LCD.
-    program = bytearray.fromhex('f3 31 ff df af e0 40 3e 0a ea 00 00 3e 42 ea 00 a0 af ea 00 c0 3e e4 e0 47 21 00 80 06 08 78 22 2f 22 05 20 f9 3e 80 e0 68 3e ff e0 69 3e 7f e0 69 3e 1f e0 69 3e 00 e0 69 3e e0 e0 69 3e 03 e0 69 3e 00 e0 69 3e 7c e0 69 3e 80 e0 26 3e 77 e0 24 3e 11 e0 25 3e 80 e0 11 3e f0 e0 12 3e 00 e0 13 3e 87 e0 14 3e 91 e0 40')
+    program = bytearray.fromhex('f3 31 ff df af e0 40 3e 0a ea 00 00 3e 42 ea 00 a0 af ea 00 c0 3e e4 e0 47 21 00 98 01 00 04 af 22 0b 78 b1 20 f9 21 00 80 06 08 78 22 2f 22 05 20 f9 3e 80 e0 68 3e ff e0 69 3e 7f e0 69 3e 1f e0 69 3e 00 e0 69 3e e0 e0 69 3e 03 e0 69 3e 00 e0 69 3e 7c e0 69 3e 80 e0 26 3e 77 e0 24 3e 11 e0 25 3e 80 e0 11 3e f0 e0 12 3e 00 e0 13 3e 87 e0 14 3e 91 e0 40')
     loop = 0x150 + len(program)
     program.extend(bytes.fromhex('f0 44 fe 90 38 fa fa 00 c0 3c ea 00 c0 ea 01 a0 e0 42 3e 20 e0 00 f0 00 2f e6 0f ea 02 a0 3e 10 e0 00 f0 00 2f e6 0f ea 03 a0 f0 44 fe 90 30 fa'))
     program.extend([0xc3,loop&255,loop>>8])
