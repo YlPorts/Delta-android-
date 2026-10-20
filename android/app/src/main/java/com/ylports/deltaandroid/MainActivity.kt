@@ -448,6 +448,7 @@ class MainActivity : Activity() {
             return
         }
         activeGame = game
+        library.markPlayed(game.id)
         val player = EmulatorView(this)
         player.onSkinMenu = { showPauseMenu() }
         emulator = player
