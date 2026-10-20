@@ -47,6 +47,8 @@ jobs:
           mkdir -p android/app/src/main/jniLibs/arm64-v8a
           cp "$CORE_SO" android/app/src/main/jniLibs/arm64-v8a/libgambatte_libretro.so
           file android/app/src/main/jniLibs/arm64-v8a/libgambatte_libretro.so
+      - name: Import original Delta iOS palette
+        run: python3 android/tools/import_ios_colors.py
       - name: Compile Android development APK
         run: gradle --project-dir android :app:assembleDebug --no-daemon
       - name: Upload installable APK (development)
