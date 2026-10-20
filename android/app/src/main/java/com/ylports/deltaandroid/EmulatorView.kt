@@ -180,7 +180,9 @@ class EmulatorView(context: Context) : View(context) {
                 // Render native game pixels, then the original skin artwork over the frame.
                 canvas.drawBitmap(bitmap, sourceRect, dest, imagePaint)
             }
-            controlsPaint.alpha = if (currentSkin.translucent) 210 else 255
+            val sliderValue = context.getSharedPreferences("delta-ios",
+                Context.MODE_PRIVATE).getInt("controllerOpacity", 100).coerceIn(0, 100)
+            controlsPaint.alpha = (sliderValue * (if (currentSkin.translucent) 210 else 255) / 100)
             canvas.drawBitmap(currentSkin.artwork, null,
                 RectF(ox, oy, ox + currentSkin.width * skinScale,
                     oy + currentSkin.height * skinScale), controlsPaint)
