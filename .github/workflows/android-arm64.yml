@@ -1,0 +1,52 @@
+name: Delta Android ARM64 (development)
+on:
+  workflow_dispatch:
+  push:
+    branches: [android/native-bootstrap]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-arm64.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          lfs: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install SDK and NDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Build original Gambatte emulation engine for ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth=1 https://github.com/libretro/gambatte-libretro.git /tmp/gambatte
+          NDK="${ANDROID_HOME}/ndk/27.2.12479018"
+          "${NDK}/ndk-build" -C /tmp/gambatte/libgambatte/libretro/jni APP_ABI=arm64-v8a APP_PLATFORM=android-24 -j2
+          CORE_SO="$(find /tmp/gambatte -type f -name '*.so' | head -1)"
+          test -n "$CORE_SO" && test -f "$CORE_SO"
+          mkdir -p android/app/src/main/jniLibs/arm64-v8a
+          cp "$CORE_SO" android/app/src/main/jniLibs/arm64-v8a/libgambatte_libretro.so
+          file android/app/src/main/jniLibs/arm64-v8a/libgambatte_libretro.so
+      - name: Compile Android development APK
+        run: gradle --project-dir android :app:assembleDebug --no-daemon
+      - name: Upload installable APK (development)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeltaAndroid-0.1.0-dev-arm64
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
