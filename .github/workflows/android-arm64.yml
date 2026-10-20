@@ -54,7 +54,7 @@ jobs:
         with: {gradle-version: '8.9'}
       - name: Install pinned SDK and NDK
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
-      - name: Build Gambatte and original Nestopia for ARM64
+      - name: Build Gambatte, original Nestopia and VBA-M for ARM64
         shell: bash
         run: |
           set -euo pipefail

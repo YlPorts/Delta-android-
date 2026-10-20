@@ -68,6 +68,30 @@ class NativePortTest {
             Thread.sleep(100)
         }
     }
+    private fun awaitPauseFrame(scenario: ActivityScenario<MainActivity>) {
+        // Back dispatch and RenderThread completion are asynchronous. Waiting for
+        // an idle message queue alone can capture the previous gameplay buffer.
+        val until = android.os.SystemClock.uptimeMillis()+10000
+        var displayed = false
+        while (!displayed && android.os.SystemClock.uptimeMillis() < until) {
+            scenario.onActivity { activity ->
+                displayed = nodes(activity.window.decorView).any {
+                    it is TextView && it.text.toString() == "Resume" && it.isShown
+                }
+            }
+            if (!displayed) Thread.sleep(50)
+        }
+        assertTrue("Back did not present the pause menu",displayed)
+        val committed = java.util.concurrent.CountDownLatch(1)
+        scenario.onActivity { activity ->
+            val root = activity.window.decorView
+            if (android.os.Build.VERSION.SDK_INT >= 29 && root.isHardwareAccelerated) {
+                root.viewTreeObserver.registerFrameCommitCallback { committed.countDown() }
+                root.postInvalidateOnAnimation()
+            } else root.postOnAnimation { root.postOnAnimation { committed.countDown() } }
+        }
+        assertTrue("Pause frame was not submitted",committed.await(10,java.util.concurrent.TimeUnit.SECONDS))
+    }
     private fun fixture(extension: String): File {
         val file = File(context.filesDir,"test-fixtures/Delta Diagnostic.$extension")
         file.parentFile!!.mkdirs()
@@ -183,6 +207,7 @@ class NativePortTest {
             screenshot("04-game-portrait")
             instrument.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
             instrument.waitForIdleSync()
+            awaitPauseFrame(scenario)
             screenshot("05-pause")
             scenario.onActivity { activity ->
                 val labels=nodes(activity.window.decorView).filterIsInstance<TextView>().map { it.text.toString() }
