@@ -3,10 +3,10 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
-    paths: ['android/**', '.github/workflows/android-arm64.yml', 'Resources/Assets.xcassets/**']
+    paths: ['android/**', '!android/docs/**', '!android/README.md', '!android/CHANGELOG.md', '.github/workflows/android-arm64.yml', 'Resources/Assets.xcassets/**']
   push:
     branches: [android/native-bootstrap]
-    paths: ['android/**', '.github/workflows/android-arm64.yml', 'Resources/Assets.xcassets/**']
+    paths: ['android/**', '!android/docs/**', '!android/README.md', '!android/CHANGELOG.md', '.github/workflows/android-arm64.yml', 'Resources/Assets.xcassets/**']
 permissions:
   contents: read
 concurrency:
@@ -130,7 +130,8 @@ jobs:
       - name: Exercise native JNI and user flows; capture actual Android screens
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 36
+          target: google_apis
           arch: x86_64
           profile: pixel_2
           disable-animations: false

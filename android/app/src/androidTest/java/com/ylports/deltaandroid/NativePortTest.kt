@@ -39,13 +39,19 @@ class NativePortTest {
         }
         instrument.waitForIdleSync()
     }
+    private fun shell(command: String): String = android.os.ParcelFileDescriptor.AutoCloseInputStream(
+        instrument.uiAutomation.executeShellCommand(command)
+    ).bufferedReader().use { it.readText() }
     private fun screenshot(name: String) {
+        require(name.matches(Regex("[a-z0-9-]+")))
         instrument.waitForIdleSync()
         Thread.sleep(350)
-        val shot = instrument.uiAutomation.takeScreenshot() ?: error("Screenshot unavailable")
-        val directory = File(context.getExternalFilesDir(null),"screenshots").apply { mkdirs() }
-        File(directory,"$name.png").outputStream().use { assertTrue(shot.compress(Bitmap.CompressFormat.PNG,100,it)) }
-        shot.recycle()
+        // UTP may uninstall the tested APK before Gradle returns. Shell-owned
+        // captures survive teardown and are pulled before the AVD shuts down.
+        shell("mkdir -p /data/local/tmp/delta-screenshots")
+        val path = "/data/local/tmp/delta-screenshots/$name.png"
+        shell("screencap -p $path")
+        assertTrue("Screenshot was not preserved", (shell("stat -c %s $path").trim().toLongOrNull() ?: 0) > 100)
     }
     private fun fixture(extension: String): File {
         val file = File(context.filesDir,"test-fixtures/Delta Diagnostic.$extension")
@@ -159,9 +165,8 @@ class NativePortTest {
             click(scenario,"${game.title}, Game Boy Color")
             Thread.sleep(1000)
             screenshot("04-game-portrait")
-            scenario.onActivity { activity ->
-                @Suppress("DEPRECATION") activity.onBackPressed()
-            }
+            instrument.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            instrument.waitForIdleSync()
             screenshot("05-pause")
             scenario.onActivity { activity ->
                 val labels=nodes(activity.window.decorView).filterIsInstance<TextView>().map { it.text.toString() }

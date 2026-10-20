@@ -71,8 +71,17 @@ object SkinPackage {
     fun installedFile(context: Context) = File(directory(context), "gbc.deltaskin")
     private fun defaults(context: Context, system: String): File {
         val file = File(context.cacheDir, "standard-$system-${BuildConfig.VERSION_CODE}.deltaskin")
-        if (!file.isFile) context.assets.open("skins/$system.deltaskin").use { input ->
-            FileOutputStream(file).use { input.copyTo(it) }
+        val complete = file.isFile && runCatching {
+            ZipFile(file).use { it.getEntry("info.json") != null }
+        }.getOrDefault(false)
+        if (!complete) {
+            val temp = File.createTempFile("standard-$system-", ".partial", context.cacheDir)
+            try {
+                context.assets.open("skins/$system.deltaskin").use { input ->
+                    FileOutputStream(temp).use { output -> input.copyTo(output) }
+                }
+                require(temp.renameTo(file)) { "No se pudo preparar la skin original." }
+            } finally { temp.delete() }
         }
         return file
     }
@@ -93,7 +102,7 @@ object SkinPackage {
     }
     fun select(context: Context, system: String, landscape: Boolean, id: String) {
         val file = installed(context, system).first { it.id == id }.file
-        ZipFile(file).use { parse(context, it, readMetadata(it), landscape) }
+        ZipFile(file).use { parse(context, it, readMetadata(it), landscape).artwork?.recycle() }
         context.getSharedPreferences("delta-ios", Context.MODE_PRIVATE).edit()
             .putString("skin.$system.${if (landscape) "landscape" else "portrait"}", id).apply()
     }

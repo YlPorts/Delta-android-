@@ -100,6 +100,9 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         volumeControlStream = AudioManager.STREAM_MUSIC
+        if (Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.registerOnBackInvokedCallback(
+            android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT
+        ) { handleBack() }
         currentPage = savedInstanceState?.getString("page") ?: prefs.getString("libraryPage", "gbc")!!
         filterText = savedInstanceState?.getString("search").orEmpty()
         showLibrary()
@@ -208,17 +211,17 @@ class MainActivity : Activity() {
             if (selected.isEmpty()) {
                 val empty = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
-                    setPadding(dp(32),0,dp(32),0)
+                    setPadding(dp(20),0,dp(20),0)
                 }
-                empty.addView(ui.text(if (filterText.isNotBlank()) "No Games Found" else "No Games",24f,Color.WHITE,true)
+                empty.addView(ui.text(if (filterText.isNotBlank()) "No Games Found" else "No Games",28f,Color.rgb(153,153,153))
                     .apply { gravity = Gravity.CENTER })
                 empty.addView(ui.text(if (filterText.isNotBlank())
                     "Please make sure the name is correct, or try searching for another game."
-                    else "You can import games by pressing the + button in the top right.",17f,Color.rgb(153,153,153))
+                    else "You can import games by pressing the + button in the top right.",16f,Color.rgb(153,153,153))
                     .apply { gravity = Gravity.CENTER; setPadding(0,dp(8),0,0) })
-                if (filterText.isBlank()) empty.addView(ui.link("Frequently Asked Questions",OriginalDeltaColors.purple) {
+                if (filterText.isBlank()) empty.addView(ui.link("Learn More…",OriginalDeltaColors.purple) {
                     openLink("https://faq.deltaemulator.com/")
-                },LinearLayout.LayoutParams(-2,dp(44)).apply { topMargin = dp(20) })
+                }.apply { textSize = 20f },LinearLayout.LayoutParams(-2,dp(30)).apply { topMargin = dp(20) })
                 content.addView(empty,FrameLayout.LayoutParams(-1,-1))
             } else {
                 val scroll = ScrollView(this)
@@ -646,7 +649,7 @@ class MainActivity : Activity() {
         return selected.isEmpty() || event.device?.descriptor == selected
     }
     override fun onKeyDown(keyCode: Int,event: KeyEvent): Boolean {
-        if (activeGame != null && keyCode == KeyEvent.KEYCODE_BUTTON_MODE) { showPauseMenu(); return true }
+        if (activeGame != null && keyCode == KeyEvent.KEYCODE_BUTTON_MODE) { handleBack(); return true }
         val mask = EmulatorView.mapPhysicalKey(keyCode)
         if (activeGame != null && !userPaused && mask != 0 && acceptsController(event)) { emulator?.pressKey(mask,true); return true }
         return super.onKeyDown(keyCode,event)
@@ -669,11 +672,14 @@ class MainActivity : Activity() {
         }
         return super.onGenericMotionEvent(event)
     }
-    @Deprecated("Physical Back compatibility")
-    override fun onBackPressed() {
-        if (activeGame != null) { if (pauseOverlay != null) resumeGame() else showPauseMenu() }
-        else if (inSettings) showLibrary() else super.onBackPressed()
+    private fun handleBack() {
+        if (activeGame != null) {
+            emulator?.selectingHeldButtons = false
+            if (pauseOverlay != null) resumeGame() else showPauseMenu()
+        } else if (inSettings) showLibrary() else finish()
     }
+    @Deprecated("Physical Back compatibility")
+    override fun onBackPressed() { handleBack() }
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (activeGame != null) {
