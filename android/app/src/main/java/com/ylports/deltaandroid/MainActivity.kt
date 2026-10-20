@@ -5,6 +5,10 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
+import android.text.Editable
+import android.text.TextWatcher
+import android.widget.EditText
+import android.widget.SeekBar
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
@@ -38,6 +42,9 @@ class MainActivity : Activity() {
     private var emulator: EmulatorView? = null
     private var activeGame: LibraryGame? = null
     private var inSettings = false
+    private var currentPage = "all"
+    private var filterText = ""
+    private var selectedGame: LibraryGame? = null
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
 
@@ -90,26 +97,8 @@ class MainActivity : Activity() {
             setBackgroundColor(BACKGROUND)
         }
 
-    private fun bottomNavigation(root: LinearLayout) {
-        val nav = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(5), 0, 0)
-        }
-        fun tab(label: String, selected: Boolean, click: () -> Unit) {
-            val view = text(label, 14f, selected).apply {
-                gravity = Gravity.CENTER
-                setTextColor(if (selected) Color.WHITE else Color.LTGRAY)
-                setOnClickListener { click() }
-                background = rounded(if (selected) SURFACE else BACKGROUND, 12)
-                layoutParams = LinearLayout.LayoutParams(0, dp(52), 1f)
-            }
-            nav.addView(view)
-        }
-        tab("Juegos", !inSettings) { showLibrary() }
-        tab("Ajustes", inSettings) { showSettings() }
-        root.addView(nav)
-    }
-
+    // Navigation below mirrors Main.storyboard: left gear, centered Games title,
+    // right "+" import button, a search controller and system page indicators.
     private fun showLibrary() {
         emulator?.stop()
         emulator = null
@@ -118,80 +107,212 @@ class MainActivity : Activity() {
             activeGame = null
         }
         inSettings = false
-        val root = page()
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = 0
+        window.navigationBarColor = BACKGROUND
+        window.statusBarColor = BACKGROUND
+
+        val root = page().apply { setPadding(0, 0, 0, 0) }
+        val all = library.games()
+        val pages = mutableListOf<Pair<String, String>>()
+        if (all.any { it.favorite }) pages.add("favorites" to "Favorites")
+        if (all.any { it.lastPlayed > 0 }) pages.add("recent" to "Recently Played")
+        pages.add("all" to "Game Boy Color")
+        if (pages.none { it.first == currentPage }) currentPage = "all"
+
+        val bar = FrameLayout(this).apply {
+            background = rounded(Color.rgb(29, 30, 35), 0)
         }
-        val heading = text("Delta", 35f, true)
-        header.addView(heading, LinearLayout.LayoutParams(0, dp(68), 1f))
-        header.addView(action("+") { picker(SELECT_ROM) },
-            LinearLayout.LayoutParams(dp(56), dp(46)))
-        root.addView(header)
-        root.addView(text("Game Boy Color", 23f, true).apply {
-            setPadding(0, dp(14), 0, dp(18))
+        val title = text(pages.first { it.first == currentPage }.second, 17f, true).apply {
+            gravity = Gravity.CENTER
+            maxLines = 1
+        }
+        bar.addView(title, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(54)).apply {
+            setMargins(dp(63), 0, dp(63), 0)
         })
-        val scroll = ScrollView(this).apply { isFillViewport = true }
-        val games = library.games()
-        if (games.isEmpty()) {
-            val empty = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
+        val gear = text("⚙", 27f).apply {
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(186, 176, 241))
+            contentDescription = "Settings"
+            setOnClickListener { showSettings() }
+        }
+        bar.addView(gear, FrameLayout.LayoutParams(dp(56), dp(54), Gravity.START or Gravity.CENTER_VERTICAL))
+        val plus = text("+", 33f).apply {
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(186, 176, 241))
+            contentDescription = "Import"
+            setOnClickListener { picker(SELECT_ROM) }
+        }
+        bar.addView(plus, FrameLayout.LayoutParams(dp(56), dp(54), Gravity.END or Gravity.CENTER_VERTICAL))
+        root.addView(bar)
+
+        val search = EditText(this).apply {
+            setSingleLine(true)
+            textSize = 16f
+            hint = "Search"
+            setHintTextColor(Color.rgb(144, 145, 153))
+            setTextColor(Color.WHITE)
+            setPadding(dp(16), 0, dp(16), 0)
+            background = rounded(SURFACE, 11)
+            setCompoundDrawablesWithIntrinsicBounds(
+                android.R.drawable.ic_menu_search, 0, 0, 0
+            )
+            compoundDrawablePadding = dp(7)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+            setText(filterText)
+        }
+        root.addView(search, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(40)).apply {
+            setMargins(dp(16), dp(12), dp(16), dp(10))
+        })
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            clipToPadding = false
+            setPadding(dp(12), dp(6), dp(12), dp(6))
+        }
+        root.addView(scroll, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+
+        val pager = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            background = rounded(Color.rgb(29, 30, 35), 0)
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+        }
+        fun updateCells() {
+            scroll.removeAllViews()
+            val chosen = when (currentPage) {
+                "favorites" -> all.filter { it.favorite }
+                "recent" -> all.filter { it.lastPlayed > 0 }
+                    .sortedByDescending { it.lastPlayed }
+                else -> all
+            }.filter { it.title.contains(filterText, ignoreCase = true) }
+            if (chosen.isEmpty()) {
+                val empty = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(20), dp(50), dp(20), dp(30))
+                }
+                empty.addView(text(if (filterText.isNotBlank()) "No Results" else "No Games",
+                    24f, true).apply { gravity = Gravity.CENTER })
+                empty.addView(text(
+                    if (filterText.isNotBlank()) "Try a different search."
+                    else "You can import games by pressing the + button in the top right.",
+                    15f
+                ).apply {
+                    setTextColor(Color.rgb(170, 171, 179))
+                    gravity = Gravity.CENTER
+                    setPadding(dp(12), dp(12), dp(12), dp(26))
+                })
+                if (filterText.isBlank()) empty.addView(
+                    action("Import Game…") { picker(SELECT_ROM) }
+                )
+                scroll.addView(empty, ScrollView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT))
+                return
             }
-            empty.addView(text("Tu biblioteca está vacía", 20f, true).apply {
-                gravity = Gravity.CENTER
-            })
-            empty.addView(text("Importa un juego .gb o .gbc con el botón +", 14f).apply {
-                gravity = Gravity.CENTER
-                setTextColor(Color.LTGRAY)
-                setPadding(dp(8), dp(12), dp(8), dp(12))
-            })
-            empty.addView(action("Importar juego") { picker(SELECT_ROM) })
-            scroll.addView(empty)
-        } else {
+
+            // Delta's compact GridCollectionViewLayout uses 90pt cover art
+            // with 12pt minimum column spacing (see iOS original).
+            val widthPx = resources.displayMetrics.widthPixels - dp(24)
+            val columns = ((widthPx + dp(12)) / dp(102)).coerceAtLeast(1)
+            val tile = kotlin.math.min(dp(90), (widthPx - dp(12) * columns) / columns)
             val grid = GridLayout(this).apply {
-                columnCount = 3
-                setPadding(0, 0, 0, dp(20))
+                columnCount = columns
+                alignmentMode = GridLayout.ALIGN_BOUNDS
+                useDefaultMargins = false
             }
-            val screenDp = resources.displayMetrics.widthPixels
-            val tileWidth = (screenDp - dp(42)) / 3
-            for (game in games) {
+            for (game in chosen) {
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(dp(4), dp(4), dp(4), dp(14))
+                    setPadding(dp(6), dp(6), dp(6), dp(14))
                     setOnClickListener { startGame(game) }
+                    setOnLongClickListener { showGameMenu(game); true }
                 }
-                val art = TextView(this).apply {
+                val artwork = TextView(this).apply {
                     text = if (game.system == "gbc") "GBC" else "GB"
-                    textSize = 26f
+                    textSize = 25f
                     gravity = Gravity.CENTER
                     setTextColor(Color.WHITE)
                     setTypeface(Typeface.DEFAULT, Typeface.BOLD)
                     background = GradientDrawable(
                         GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(Color.rgb(89, 55, 173), Color.rgb(37, 28, 66))
-                    ).apply { cornerRadius = dp(10).toFloat() }
+                        intArrayOf(Color.rgb(84, 73, 119), Color.rgb(37, 32, 57))
+                    ).apply { cornerRadius = dp(7).toFloat() }
                 }
-                card.addView(art, LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, (tileWidth * 1.24f).toInt()))
+                card.addView(artwork, LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, (tile * 1.12f).toInt()))
                 card.addView(text(game.title, 12f, true).apply {
                     maxLines = 2
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                    setPadding(0, dp(5), 0, 0)
-                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(43)))
+                    setPadding(0, dp(6), 0, 0)
+                }, LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(43)))
                 grid.addView(card, GridLayout.LayoutParams().apply {
-                    width = tileWidth
+                    width = tile + dp(12)
                     height = GridLayout.LayoutParams.WRAP_CONTENT
                 })
             }
             scroll.addView(grid)
         }
-        root.addView(scroll, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        bottomNavigation(root)
+        fun redrawPager() {
+            pager.removeAllViews()
+            for ((id, label) in pages) {
+                val indicator = text(when(id) {
+                    "favorites" -> "★"
+                    "recent" -> "◷"
+                    else -> "●"
+                }, 22f, true).apply {
+                    gravity = Gravity.CENTER
+                    setTextColor(if (id == currentPage)
+                        Color.WHITE else Color.rgb(115, 115, 122))
+                    contentDescription = label
+                    setOnClickListener {
+                        currentPage = id
+                        title.text = label
+                        redrawPager()
+                        updateCells()
+                    }
+                }
+                pager.addView(indicator, LinearLayout.LayoutParams(dp(64), dp(44)))
+            }
+        }
+        redrawPager()
+        root.addView(pager)
+        search.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterText = s?.toString().orEmpty()
+                updateCells()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+        updateCells()
         setContentView(root)
     }
 
+    private fun showGameMenu(game: LibraryGame) {
+        AlertDialog.Builder(this)
+            .setTitle(game.title)
+            .setItems(arrayOf(
+                "Play",
+                if (game.favorite) "Remove from Favorites" else "Add to Favorites",
+                "Cancel"
+            )) { _, item ->
+                when(item) {
+                    0 -> startGame(game)
+                    1 -> {
+                        library.toggleFavorite(game.id)
+                        showLibrary()
+                    }
+                }
+            }.show()
+    }
+
+    // Inset grouped sections and navigation match Settings.storyboard structure.
+    // Unported settings are visibly marked rather than pretending to function.
     private fun showSettings() {
         if (activeGame != null) {
             emulator?.stop()
@@ -200,39 +321,117 @@ class MainActivity : Activity() {
             activeGame = null
         }
         inSettings = true
-        val root = page()
-        root.addView(text("Ajustes", 34f, true).apply {
-            setPadding(0, dp(16), 0, dp(28))
+        val root = page().apply {
+            setPadding(0, 0, 0, 0)
+            setBackgroundColor(Color.rgb(19, 19, 24))
+        }
+        val toolbar = FrameLayout(this).apply {
+            background = rounded(Color.rgb(29, 30, 35), 0)
+        }
+        toolbar.addView(text("Settings", 17f, true).apply {
+            gravity = Gravity.CENTER
+        }, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(54)))
+        toolbar.addView(text("Done", 17f, true).apply {
+            setTextColor(Color.rgb(183, 174, 250))
+            gravity = Gravity.CENTER
+            setOnClickListener { showLibrary() }
+        }, FrameLayout.LayoutParams(dp(74), dp(54), Gravity.END or Gravity.CENTER_VERTICAL))
+        root.addView(toolbar)
+
+        val scroll = ScrollView(this)
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(22))
+        }
+        fun section(name: String) {
+            body.addView(text(name.uppercase(), 13f).apply {
+                setTextColor(Color.rgb(160, 162, 171))
+                setPadding(dp(18), dp(24), 0, dp(8))
+            })
+        }
+        fun row(label: String, detail: String = "", enabled: Boolean = true,
+                callback: (() -> Unit)? = null) {
+            val wrapper = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = rounded(SURFACE, 10)
+                setPadding(dp(16), dp(10), dp(14), dp(10))
+            }
+            val labels = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            labels.addView(text(label, 16f).apply {
+                if (!enabled) setTextColor(Color.rgb(172, 172, 181))
+            })
+            if (detail.isNotEmpty()) labels.addView(text(detail, 12f).apply {
+                setTextColor(Color.rgb(167, 165, 175))
+                setPadding(0, dp(3), 0, 0)
+            })
+            wrapper.addView(labels, LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            wrapper.addView(text(if (enabled && callback != null) "›" else "", 26f).apply {
+                setTextColor(Color.rgb(140, 140, 154))
+            })
+            if (enabled && callback != null) wrapper.setOnClickListener { callback() }
+            body.addView(wrapper, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(if(detail.isEmpty()) 53 else 66)
+            ).apply { setMargins(0, 0, 0, dp(4)) })
+        }
+        section("Controllers")
+        row("Player 1", "On-screen controls")
+        row("Player 2", "No Connected Controllers", false)
+        row("Player 3", "No Connected Controllers", false)
+        row("Player 4", "No Connected Controllers", false)
+
+        section("Controller Skins")
+        val skin = SkinPackage.installedFile(this)
+        val skinName = SkinPackage.metadata(skin)?.optString("name")
+            ?: "Default Controller Skin"
+        row("Game Boy Color", skinName) { picker(SELECT_SKIN) }
+        row("Import Controller Skin…") { picker(SELECT_SKIN) }
+        row("Restore Default Skin") {
+            AlertDialog.Builder(this).setTitle("Restore Controller Skin?")
+                .setMessage("The imported skin will be removed.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Restore") { _, _ ->
+                    skin.delete()
+                    showSettings()
+                }.show()
+        }
+
+        section("Controller Opacity")
+        val opacity = getSharedPreferences("delta-ios", MODE_PRIVATE)
+        body.addView(SeekBar(this).apply {
+            max = 100
+            progress = opacity.getInt("controllerOpacity", 100)
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(view: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (fromUser) opacity.edit().putInt("controllerOpacity", value).apply()
+                }
+                override fun onStartTrackingTouch(view: SeekBar?) {}
+                override fun onStopTrackingTouch(view: SeekBar?) {}
+            })
         })
-        root.addView(text("Skins de controles", 22f, true))
-        val skinFile = SkinPackage.installedFile(this)
-        val title = SkinPackage.metadata(skinFile)?.optString("name")
-        root.addView(text(title ?: "Controles táctiles predeterminados", 15f).apply {
-            setTextColor(Color.LTGRAY)
-            setPadding(0, dp(14), 0, dp(14))
-        })
-        root.addView(action("Importar skin original .deltaskin") {
-            picker(SELECT_SKIN)
-        })
-        root.addView(action("Restaurar controles predeterminados") {
-            skinFile.delete()
-            showSettings()
-        }.apply { setPadding(0, dp(4), 0, dp(4)) })
-        root.addView(text("Compatible actualmente: skins originales de GB/GBC con " +
-            "PNG o PDF y coordenadas de info.json.", 13f).apply {
-            setTextColor(Color.LTGRAY)
-            setPadding(0, dp(24), 0, dp(20))
-        })
-        root.addView(text("Acerca de", 22f, true))
-        root.addView(text("Delta Android 0.2.0-dev\n" +
-            "Motor original de Game Boy / Game Boy Color: Gambatte.\n" +
-            "Port en desarrollo; los demás sistemas, carátulas originales, " +
-            "filtros avanzados y Delta Sync siguen pendientes.", 14f).apply {
-            setTextColor(Color.LTGRAY)
-            setPadding(0, dp(14), 0, dp(12))
-        })
-        root.addView(View(this), LinearLayout.LayoutParams(1, 0, 1f))
-        bottomNavigation(root)
+        section("Display")
+        row("Change App Icon", "Not ported yet", false)
+        section("Game Audio")
+        row("Respect Silent Mode", "Not ported yet", false)
+        section("Haptic Feedback")
+        row("Buttons / Control Sticks", "Not ported yet", false)
+        section("Delta Sync")
+        row("Service", "Not ported yet", false)
+        section("Core Settings")
+        row("Game Boy Color", "Gambatte")
+        section("Advanced")
+        row("Experimental Features", "Not ported yet", false)
+        section("Credits")
+        row("Licenses", "Delta AGPL-3.0") {
+            AlertDialog.Builder(this).setTitle("Licenses")
+                .setMessage("Delta is licensed under AGPLv3. Gambatte retains its own upstream license.")
+                .setPositiveButton("Done", null).show()
+        }
+        scroll.addView(body)
+        root.addView(scroll, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         setContentView(root)
     }
 
