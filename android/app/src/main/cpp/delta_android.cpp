@@ -235,6 +235,10 @@ Java_com_ylports_deltaandroid_EmulatorBridge_step(JNIEnv *env, jobject,
     if (len) env->SetShortArrayRegion(sound, 0, static_cast<jsize>(len), samples.data());
     return static_cast<jint>(len);
 }
+extern "C" JNIEXPORT void JNICALL
+Java_com_ylports_deltaandroid_EmulatorBridge_flushSave(JNIEnv *, jobject) {
+    saveRam();
+}
 extern "C" JNIEXPORT jint JNICALL
 Java_com_ylports_deltaandroid_EmulatorBridge_sampleRate(JNIEnv *, jobject) {
     return sampleRate;
