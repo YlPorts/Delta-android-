@@ -8,6 +8,7 @@ import android.graphics.Typeface
 import android.text.Editable
 import android.text.TextWatcher
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.SeekBar
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -33,6 +34,7 @@ class MainActivity : Activity() {
     companion object {
         private const val SELECT_ROM = 101
         private const val SELECT_SKIN = 102
+        private const val SELECT_ARTWORK = 103
         private val BACKGROUND = Color.rgb(16, 17, 21)
         private val SURFACE = Color.rgb(34, 35, 43)
         private val ACCENT = Color.rgb(121, 83, 231)
@@ -75,7 +77,7 @@ class MainActivity : Activity() {
     private fun picker(request: Int) {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*"
+            type = if (request == SELECT_ARTWORK) "image/*" else "*/*"
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         startActivityForResult(intent, request)
@@ -242,8 +244,19 @@ class MainActivity : Activity() {
                         intArrayOf(Color.rgb(84, 73, 119), Color.rgb(37, 32, 57))
                     ).apply { cornerRadius = dp(7).toFloat() }
                 }
-                card.addView(artwork, LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, (tile * 1.12f).toInt()))
+                val customArt = GameArtwork.load(this, game)
+                if (customArt != null) {
+                    card.addView(ImageView(this).apply {
+                        setImageBitmap(customArt)
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        background = rounded(SURFACE, 7)
+                        clipToOutline = true
+                    }, LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, (tile * 1.12f).toInt()))
+                } else {
+                    card.addView(artwork, LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, (tile * 1.12f).toInt()))
+                }
                 card.addView(text(game.title, 12f, true).apply {
                     maxLines = 2
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
@@ -299,13 +312,17 @@ class MainActivity : Activity() {
             .setItems(arrayOf(
                 "Play",
                 if (game.favorite) "Remove from Favorites" else "Add to Favorites",
-                "Cancel"
+                "Change Artwork…", "Cancel"
             )) { _, item ->
                 when(item) {
                     0 -> startGame(game)
                     1 -> {
                         library.toggleFavorite(game.id)
                         showLibrary()
+                    }
+                    2 -> {
+                        selectedGame = game
+                        picker(SELECT_ARTWORK)
                     }
                 }
             }.show()
@@ -529,6 +546,20 @@ class MainActivity : Activity() {
             } catch (error: Exception) {
                 AlertDialog.Builder(this).setTitle("Error al importar")
                     .setMessage(error.message).setPositiveButton("Aceptar", null).show()
+            }
+        }
+        if (requestCode == SELECT_ARTWORK) {
+            val game = selectedGame
+            selectedGame = null
+            if (uri != null && game != null) {
+                try {
+                    GameArtwork.import(this, game, uri)
+                    showLibrary()
+                } catch (error: Exception) {
+                    AlertDialog.Builder(this).setTitle("Artwork Import Error")
+                        .setMessage(error.message)
+                        .setPositiveButton("Done", null).show()
+                }
             }
         }
         if (requestCode == SELECT_SKIN) {
