@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
 import android.media.AudioFormat
 import android.media.AudioManager
@@ -49,6 +50,31 @@ class EmulatorView(context: Context) : View(context) {
     private val imagePaint = Paint().apply { isFilterBitmap = false; isAntiAlias = false }
     private val controlsPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val touchMask = AtomicInteger(0)
+    private var skin: SkinPresentation? = null
+    var onSkinMenu: (() -> Unit)? = null
+
+    fun refreshSkin() {
+        skin = SkinPackage.load(context, width > height)
+        invalidate()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        refreshSkin()
+    }
+
+    private fun buttonForDeltaInput(name: String): Int = when (name.lowercase()) {
+        "a" -> A
+        "b" -> B
+        "start" -> START
+        "select" -> SELECT
+        "up" -> UP
+        "down" -> DOWN
+        "left" -> LEFT
+        "right" -> RIGHT
+        else -> 0
+    }
+
     private val keyMask = AtomicInteger(0)
     @Volatile private var running = false
     private var worker: Thread? = null
@@ -124,14 +150,48 @@ class EmulatorView(context: Context) : View(context) {
         canvas.drawColor(Color.rgb(12, 15, 19))
         val w = width.toFloat()
         val h = height.toFloat()
+        synchronized(frameLock) {
+            bitmap.setPixels(framePixels, 0, 160, 0, 0, 160, 144)
+        }
+
+        val currentSkin = skin
+        if (currentSkin != null) {
+            val skinScale = min(w / currentSkin.width, h / currentSkin.height)
+            val ox = (w - currentSkin.width * skinScale) / 2f
+            val oy = (h - currentSkin.height * skinScale) / 2f
+            val destinations = if (currentSkin.screens.isEmpty())
+                listOf(SkinScreen(null, RectF(
+                    currentSkin.width * 0.05f,
+                    currentSkin.height * 0.08f,
+                    currentSkin.width * 0.95f,
+                    currentSkin.height * 0.55f
+                ))) else currentSkin.screens
+            for (screen in destinations) {
+                val sourceRect = screen.input?.let {
+                    Rect(it.left.toInt().coerceIn(0, 159),
+                        it.top.toInt().coerceIn(0, 143),
+                        it.right.toInt().coerceIn(1, 160),
+                        it.bottom.toInt().coerceIn(1, 144))
+                } ?: Rect(0, 0, 160, 144)
+                if (sourceRect.isEmpty) continue
+                val p = screen.output
+                val dest = RectF(ox + p.left * skinScale, oy + p.top * skinScale,
+                    ox + p.right * skinScale, oy + p.bottom * skinScale)
+                // Render native game pixels, then the original skin artwork over the frame.
+                canvas.drawBitmap(bitmap, sourceRect, dest, imagePaint)
+            }
+            controlsPaint.alpha = if (currentSkin.translucent) 210 else 255
+            canvas.drawBitmap(currentSkin.artwork, null,
+                RectF(ox, oy, ox + currentSkin.width * skinScale,
+                    oy + currentSkin.height * skinScale), controlsPaint)
+            controlsPaint.alpha = 255
+            return
+        }
         val maxVideoW = w * 0.96f
         val maxVideoH = h * 0.65f
         val scale = min(maxVideoW / 160f, maxVideoH / 144f)
         val left = (w - scale * 160) / 2f
         val top = max(8f, (maxVideoH - scale * 144) / 2f)
-        synchronized(frameLock) {
-            bitmap.setPixels(framePixels, 0, 160, 0, 0, 160, 144)
-        }
         canvas.drawBitmap(bitmap, null, RectF(left, top, left + scale * 160, top + scale * 144), imagePaint)
 
         controlsPaint.textAlign = Paint.Align.CENTER
@@ -163,6 +223,29 @@ class EmulatorView(context: Context) : View(context) {
             return true
         }
         var mask = 0
+        val customSkin = skin
+        if (customSkin != null) {
+            val factor = min(width.toFloat() / customSkin.width,
+                height.toFloat() / customSkin.height)
+            val sx = (width - customSkin.width * factor) / 2f
+            val sy = (height - customSkin.height * factor) / 2f
+            for (index in 0 until event.pointerCount) {
+                if (action == MotionEvent.ACTION_POINTER_UP && index == event.actionIndex) continue
+                val x = (event.getX(index) - sx) / factor
+                val y = (event.getY(index) - sy) / factor
+                for (key in customSkin.inputAt(x, y)) {
+                    mask = mask or buttonForDeltaInput(key)
+                    if (key.equals("menu", ignoreCase = true) &&
+                        (action == MotionEvent.ACTION_DOWN ||
+                            action == MotionEvent.ACTION_POINTER_DOWN) &&
+                        index == event.actionIndex) {
+                        onSkinMenu?.invoke()
+                    }
+                }
+            }
+            touchMask.set(mask)
+            return true
+        }
         val w = width.toFloat()
         val h = height.toFloat()
         val d = min(w * 0.095f, h * 0.09f)
